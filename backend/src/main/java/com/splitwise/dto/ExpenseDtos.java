@@ -1,5 +1,6 @@
 package com.splitwise.dto;
 
+import com.splitwise.entity.ExpenseCategory;
 import com.splitwise.entity.SplitType;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
@@ -21,6 +22,7 @@ public class ExpenseDtos {
             @NotBlank String description,
             @NotNull @Positive BigDecimal amount,
             @NotNull SplitType splitType,
+            ExpenseCategory category,
             @NotEmpty List<String> participantUserIds,
             List<ExpenseShareInput> shares
     ) {}
@@ -38,6 +40,7 @@ public class ExpenseDtos {
             String description,
             BigDecimal amount,
             SplitType splitType,
+            ExpenseCategory category,
             String paidByUserId,
             String paidByName,
             Instant createdAt,
@@ -56,5 +59,27 @@ public class ExpenseDtos {
             String toUserId,
             String toUserName,
             BigDecimal amount
+    ) {}
+
+    public record RecordSettlementRequest(
+            @NotBlank String toUserId,
+            @NotNull @Positive BigDecimal amount
+    ) {}
+
+    public record SettlementResponse(
+            String id,
+            String groupId,
+            String fromUserId,
+            String fromUserName,
+            String toUserId,
+            String toUserName,
+            BigDecimal amount,
+            Instant settledAt
+    ) {}
+
+    public record CategoryBreakdown(
+            ExpenseCategory category,
+            BigDecimal totalAmount,
+            int expenseCount
     ) {}
 }

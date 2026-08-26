@@ -2,9 +2,11 @@ package com.splitwise.service;
 
 import com.splitwise.dto.ExpenseDtos.*;
 import com.splitwise.entity.Expense;
+import com.splitwise.entity.ExpenseCategory;
 import com.splitwise.entity.ExpenseShare;
 import com.splitwise.entity.Group;
 import com.splitwise.entity.GroupMember;
+import com.splitwise.entity.Settlement;
 import com.splitwise.entity.User;
 import com.splitwise.exception.BadRequestException;
 import com.splitwise.exception.ForbiddenException;
@@ -13,6 +15,7 @@ import com.splitwise.repository.ExpenseRepository;
 import com.splitwise.repository.ExpenseShareRepository;
 import com.splitwise.repository.GroupMemberRepository;
 import com.splitwise.repository.GroupRepository;
+import com.splitwise.repository.SettlementRepository;
 import com.splitwise.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -38,6 +41,7 @@ public class ExpenseService {
     private final GroupRepository groupRepository;
     private final GroupMemberRepository groupMemberRepository;
     private final UserRepository userRepository;
+    private final SettlementRepository settlementRepository;
 
     @Transactional
     public ExpenseResponse createExpense(String groupId, String payerUserId, CreateExpenseRequest req) {
@@ -68,6 +72,7 @@ public class ExpenseService {
                 .description(req.description())
                 .amount(req.amount())
                 .splitType(req.splitType())
+                .category(req.category() != null ? req.category() : ExpenseCategory.OTHER)
                 .build();
 
         List<ExpenseShare> shares = switch (req.splitType()) {
@@ -96,6 +101,26 @@ public class ExpenseService {
     }
 
     @Transactional(readOnly = true)
+    public List<CategoryBreakdown> getCategoryBreakdown(String groupId, String requesterUserId) {
+        groupRepository.findById(groupId)
+                .orElseThrow(() -> new ResourceNotFoundException("Group not found"));
+        List<GroupMember> members = groupMemberRepository.findByGroupId(groupId);
+        requireMembership(members, requesterUserId);
+
+        Map<ExpenseCategory, List<Expense>> byCategory = expenseRepository.findByGroupId(groupId).stream()
+                .collect(Collectors.groupingBy(Expense::getCategory));
+
+        return byCategory.entrySet().stream()
+                .map(e -> new CategoryBreakdown(
+                        e.getKey(),
+                        e.getValue().stream().map(Expense::getAmount).reduce(BigDecimal.ZERO, BigDecimal::add),
+                        e.getValue().size()
+                ))
+                .sorted(Comparator.comparing(CategoryBreakdown::totalAmount).reversed())
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
     public List<BalanceResponse> getGroupBalances(String groupId, String requesterUserId) {
         groupRepository.findById(groupId)
                 .orElseThrow(() -> new ResourceNotFoundException("Group not found"));
@@ -110,13 +135,64 @@ public class ExpenseService {
                 .collect(Collectors.groupingBy(s -> s.getUser().getId(),
                         Collectors.reducing(BigDecimal.ZERO, ExpenseShare::getShareAmount, BigDecimal::add)));
 
+        List<Settlement> settlements = settlementRepository.findByGroupId(groupId);
+        Map<String, BigDecimal> settledPaidByUser = settlements.stream()
+                .collect(Collectors.groupingBy(s -> s.getFromUser().getId(),
+                        Collectors.reducing(BigDecimal.ZERO, Settlement::getAmount, BigDecimal::add)));
+        Map<String, BigDecimal> settledReceivedByUser = settlements.stream()
+                .collect(Collectors.groupingBy(s -> s.getToUser().getId(),
+                        Collectors.reducing(BigDecimal.ZERO, Settlement::getAmount, BigDecimal::add)));
+
         return members.stream()
                 .map(m -> {
                     String userId = m.getUser().getId();
                     BigDecimal paid = paidByUser.getOrDefault(userId, BigDecimal.ZERO);
                     BigDecimal owed = owedByUser.getOrDefault(userId, BigDecimal.ZERO);
-                    return new BalanceResponse(userId, m.getUser().getName(), paid.subtract(owed));
+                    BigDecimal settledReceived = settledReceivedByUser.getOrDefault(userId, BigDecimal.ZERO);
+                    BigDecimal settledPaid = settledPaidByUser.getOrDefault(userId, BigDecimal.ZERO);
+                    BigDecimal netBalance = paid.subtract(owed).add(settledReceived).subtract(settledPaid);
+                    return new BalanceResponse(userId, m.getUser().getName(), netBalance);
                 })
+                .toList();
+    }
+
+    @Transactional
+    public SettlementResponse recordSettlement(String groupId, String fromUserId, RecordSettlementRequest req) {
+        Group group = groupRepository.findById(groupId)
+                .orElseThrow(() -> new ResourceNotFoundException("Group not found"));
+        List<GroupMember> members = groupMemberRepository.findByGroupId(groupId);
+        requireMembership(members, fromUserId);
+        requireMembership(members, req.toUserId());
+
+        if (fromUserId.equals(req.toUserId())) {
+            throw new BadRequestException("You can't record a settlement paying yourself");
+        }
+
+        Map<String, User> memberUsersById = members.stream()
+                .collect(Collectors.toMap(m -> m.getUser().getId(), GroupMember::getUser));
+
+        Settlement settlement = Settlement.builder()
+                .group(group)
+                .fromUser(memberUsersById.get(fromUserId))
+                .toUser(memberUsersById.get(req.toUserId()))
+                .amount(req.amount())
+                .build();
+
+        settlement = settlementRepository.save(settlement);
+
+        return toSettlementResponse(settlement);
+    }
+
+    @Transactional(readOnly = true)
+    public List<SettlementResponse> listSettlements(String groupId, String requesterUserId) {
+        groupRepository.findById(groupId)
+                .orElseThrow(() -> new ResourceNotFoundException("Group not found"));
+        List<GroupMember> members = groupMemberRepository.findByGroupId(groupId);
+        requireMembership(members, requesterUserId);
+
+        return settlementRepository.findByGroupId(groupId).stream()
+                .sorted(Comparator.comparing(Settlement::getSettledAt).reversed())
+                .map(this::toSettlementResponse)
                 .toList();
     }
 
@@ -260,10 +336,24 @@ public class ExpenseService {
                 expense.getDescription(),
                 expense.getAmount(),
                 expense.getSplitType(),
+                expense.getCategory(),
                 expense.getPaidBy().getId(),
                 expense.getPaidBy().getName(),
                 expense.getCreatedAt(),
                 shareResponses
+        );
+    }
+
+    private SettlementResponse toSettlementResponse(Settlement settlement) {
+        return new SettlementResponse(
+                settlement.getId(),
+                settlement.getGroup().getId(),
+                settlement.getFromUser().getId(),
+                settlement.getFromUser().getName(),
+                settlement.getToUser().getId(),
+                settlement.getToUser().getName(),
+                settlement.getAmount(),
+                settlement.getSettledAt()
         );
     }
 }

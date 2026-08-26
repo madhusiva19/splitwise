@@ -42,4 +42,23 @@ public class ExpenseController {
                                                                           @PathVariable String groupId) {
         return ResponseEntity.ok(expenseService.suggestSettlements(groupId, currentUser.getUserId()));
     }
+
+    @PostMapping("/settlements")
+    public ResponseEntity<SettlementResponse> recordSettlement(@AuthenticationPrincipal AppUserDetails currentUser,
+                                                                 @PathVariable String groupId,
+                                                                 @Valid @RequestBody RecordSettlementRequest request) {
+        return ResponseEntity.ok(expenseService.recordSettlement(groupId, currentUser.getUserId(), request));
+    }
+
+    @GetMapping("/settlements")
+    public ResponseEntity<List<SettlementResponse>> listSettlements(@AuthenticationPrincipal AppUserDetails currentUser,
+                                                                      @PathVariable String groupId) {
+        return ResponseEntity.ok(expenseService.listSettlements(groupId, currentUser.getUserId()));
+    }
+
+    @GetMapping("/categories/breakdown")
+    public ResponseEntity<List<CategoryBreakdown>> getCategoryBreakdown(@AuthenticationPrincipal AppUserDetails currentUser,
+                                                                          @PathVariable String groupId) {
+        return ResponseEntity.ok(expenseService.getCategoryBreakdown(groupId, currentUser.getUserId()));
+    }
 }

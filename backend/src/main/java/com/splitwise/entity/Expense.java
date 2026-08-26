@@ -39,6 +39,10 @@ public class Expense {
     @Column(name = "split_type", nullable = false, length = 20)
     private SplitType splitType;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "category", nullable = false, length = 20)
+    private ExpenseCategory category;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
