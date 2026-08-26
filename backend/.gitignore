@@ -3,4 +3,3 @@ target/
 *.log
 .idea/
 *.iml
-.env.example
