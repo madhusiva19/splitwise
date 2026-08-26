@@ -1,0 +1,32 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-paper text-ink font-sans;
+  }
+}
+
+@layer components {
+  /* Row of small punched-hole circles along the top edge of the auth card,
+     like a ticket stub torn from a receipt roll. */
+  .perforated-top {
+    height: 18px;
+    background-image: radial-gradient(
+      circle at center,
+      theme("colors.paper") 0 5px,
+      theme("colors.line") 5px 6px,
+      transparent 6px 100%
+    );
+    background-size: 22px 22px;
+    background-position: center;
+    background-repeat: repeat-x;
+  }
+
+  /* Dashed "stitch" line used between the Login/Signup tabs, and under the
+     perforated edge, to sell the torn-paper look. */
+  .stitch-divider {
+    border-top: 2px dashed theme("colors.line");
+  }
+}
