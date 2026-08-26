@@ -14,7 +14,7 @@ export default function AuthCard({ mode, children }: AuthCardProps) {
         <div className="px-8 pb-8 pt-2">
           <header className="mb-6 text-center">
             <h1 className="font-mono text-lg font-bold tracking-tight text-ink">
-              Splitwise-lite
+              Splitwise
             </h1>
             <p className="mt-1 font-mono text-xs uppercase tracking-widest text-ink/60">
               Split the bill, not the friendship

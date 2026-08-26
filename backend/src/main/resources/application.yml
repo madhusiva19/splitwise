@@ -1,6 +1,6 @@
 spring:
   application:
-    name: splitwise-lite
+    name: splitwise
 
   datasource:
     url: jdbc:postgresql://ep-dry-cell-aytefoq2-pooler.c-5.us-east-2.aws.neon.tech/neondb?sslmode=require

@@ -6,8 +6,8 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 
 @SpringBootApplication
 @EnableScheduling // handy later if you add reminder emails / recurring settlement digests
-public class SplitwiseLiteApplication {
+public class SplitwiseApplication {
     public static void main(String[] args) {
-        SpringApplication.run(SplitwiseLiteApplication.class, args);
+        SpringApplication.run(SplitwiseApplication.class, args);
     }
 }

@@ -12,9 +12,9 @@
     </parent>
 
     <groupId>com.splitwise</groupId>
-    <artifactId>splitwise-lite</artifactId>
+    <artifactId>splitwise</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <name>splitwise-lite</name>
+    <name>splitwise</name>
     <description>Group expense splitting API with JWT auth and debt simplification</description>
 
     <properties>

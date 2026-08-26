@@ -2,7 +2,15 @@
 
 import { useMemo, useState, FormEvent } from "react";
 import Field from "@/components/Field";
-import { createExpense, CreateExpenseRequest, ExpenseResponse, SplitType } from "@/lib/expenses";
+import {
+  createExpense,
+  CreateExpenseRequest,
+  ExpenseCategory,
+  ExpenseResponse,
+  EXPENSE_CATEGORIES,
+  formatCategory,
+  SplitType,
+} from "@/lib/expenses";
 import { GroupMember } from "@/lib/groups";
 
 interface AddExpenseFormProps {
@@ -16,6 +24,7 @@ export default function AddExpenseForm({ groupId, members, onCreated, onCancel }
   const [description, setDescription] = useState("");
   const [amount, setAmount] = useState("");
   const [splitType, setSplitType] = useState<SplitType>("EQUAL");
+  const [category, setCategory] = useState<ExpenseCategory | undefined>(undefined);
   const [participantIds, setParticipantIds] = useState<string[]>(members.map((m) => m.userId));
   const [shareInputs, setShareInputs] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
@@ -56,6 +65,7 @@ export default function AddExpenseForm({ groupId, members, onCreated, onCancel }
         description,
         amount: parsedAmount,
         splitType,
+        category,
         participantUserIds: participantIds,
         shares: needsShares
           ? participantIds.map((id) => ({ userId: id, amount: parseFloat(shareInputs[id]) || 0 }))
@@ -103,6 +113,32 @@ export default function AddExpenseForm({ groupId, members, onCreated, onCancel }
           <option value="PERCENTAGE">Percentage</option>
         </select>
       </label>
+
+      <div>
+        <span className="mb-2 block font-mono text-xs uppercase tracking-wider text-ink/70">
+          Category <span className="normal-case text-ink/40">(optional)</span>
+        </span>
+        <div className="flex flex-wrap gap-2">
+          {EXPENSE_CATEGORIES.map((c) => {
+            const selected = category === c;
+            return (
+              <button
+                key={c}
+                type="button"
+                onClick={() => setCategory(selected ? undefined : c)}
+                aria-pressed={selected}
+                className={`rounded-full border px-3 py-1 font-mono text-xs transition-colors ${
+                  selected
+                    ? "border-ledger-green bg-ledger-green text-paper"
+                    : "border-line text-ink/60 hover:text-ink"
+                }`}
+              >
+                {formatCategory(c)}
+              </button>
+            );
+          })}
+        </div>
+      </div>
 
       <div>
         <span className="mb-2 block font-mono text-xs uppercase tracking-wider text-ink/70">

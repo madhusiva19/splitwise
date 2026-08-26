@@ -14,7 +14,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Splitwise-lite",
+  title: "Splitwise",
   description: "Group expense splitting, kept simple.",
 };
 

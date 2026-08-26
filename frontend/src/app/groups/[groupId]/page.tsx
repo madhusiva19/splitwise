@@ -7,17 +7,27 @@ import Card from "@/components/Card";
 import Field from "@/components/Field";
 import Money from "@/components/Money";
 import AddExpenseForm from "@/components/AddExpenseForm";
+import CategoryBreakdownChart from "@/components/CategoryBreakdownChart";
+import AddRecurringExpenseForm from "@/components/AddRecurringExpenseForm";
+import RecurringExpensesList from "@/components/RecurringExpensesList";
 import { getGroup, addMember, GroupResponse } from "@/lib/groups";
 import {
   listExpenses,
   getBalances,
   getSettlementSuggestions,
+  getCategoryBreakdown,
+  formatCategory,
   ExpenseResponse,
   BalanceResponse,
   SettlementSuggestion,
+  CategoryBreakdown,
 } from "@/lib/expenses";
+import {
+  listRecurringExpenses,
+  RecurringExpenseResponse,
+} from "@/lib/recurringExpenses";
 
-type Tab = "expenses" | "balances" | "settle";
+type Tab = "expenses" | "balances" | "settle" | "recurring";
 
 function ExpenseItem({ expense }: { expense: ExpenseResponse }) {
   const [expanded, setExpanded] = useState(false);
@@ -30,7 +40,12 @@ function ExpenseItem({ expense }: { expense: ExpenseResponse }) {
         className="flex w-full items-center justify-between gap-3 text-left"
       >
         <div>
-          <p className="font-mono text-base font-bold text-ink">{expense.description}</p>
+          <div className="flex items-center gap-2">
+            <p className="font-mono text-base font-bold text-ink">{expense.description}</p>
+            <span className="rounded-full border border-line px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider text-ink/60">
+              {formatCategory(expense.category)}
+            </span>
+          </div>
           <p className="font-mono text-xs uppercase tracking-wider text-ink/60">
             Paid by {expense.paidByName} · {new Date(expense.createdAt).toLocaleDateString()}
           </p>
@@ -63,6 +78,8 @@ export default function GroupDetailPage() {
   const [expenses, setExpenses] = useState<ExpenseResponse[] | null>(null);
   const [balances, setBalances] = useState<BalanceResponse[] | null>(null);
   const [settlements, setSettlements] = useState<SettlementSuggestion[] | null>(null);
+  const [categoryBreakdown, setCategoryBreakdown] = useState<CategoryBreakdown[] | null>(null);
+  const [recurringExpenses, setRecurringExpenses] = useState<RecurringExpenseResponse[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>("expenses");
 
@@ -72,6 +89,8 @@ export default function GroupDetailPage() {
   const [memberError, setMemberError] = useState<string | null>(null);
 
   const [showExpenseForm, setShowExpenseForm] = useState(false);
+  const [showRecurringForm, setShowRecurringForm] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState("");
 
   useEffect(() => {
     const accessToken = localStorage.getItem("accessToken");
@@ -79,22 +98,27 @@ export default function GroupDetailPage() {
       router.replace("/login");
       return;
     }
+    setCurrentUserId(localStorage.getItem("userId") ?? "");
     if (groupId) loadAll();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router, groupId]);
 
   async function loadAll() {
     try {
-      const [g, e, b, s] = await Promise.all([
+      const [g, e, b, s, c, r] = await Promise.all([
         getGroup(groupId),
         listExpenses(groupId),
         getBalances(groupId),
         getSettlementSuggestions(groupId),
+        getCategoryBreakdown(groupId),
+        listRecurringExpenses(groupId),
       ]);
       setGroup(g);
       setExpenses(e);
       setBalances(b);
       setSettlements(s);
+      setCategoryBreakdown(c);
+      setRecurringExpenses(r);
     } catch (err) {
       setLoadError(err instanceof Error ? err.message : "Failed to load group");
     }
@@ -122,6 +146,16 @@ export default function GroupDetailPage() {
     setExpenses((prev) => (prev ? [expense, ...prev] : [expense]));
     getBalances(groupId).then(setBalances).catch(() => {});
     getSettlementSuggestions(groupId).then(setSettlements).catch(() => {});
+    getCategoryBreakdown(groupId).then(setCategoryBreakdown).catch(() => {});
+  }
+
+  function handleRecurringExpenseCreated(template: RecurringExpenseResponse) {
+    setShowRecurringForm(false);
+    setRecurringExpenses((prev) => (prev ? [template, ...prev] : [template]));
+  }
+
+  function handleRecurringExpenseDeactivated(templateId: string) {
+    setRecurringExpenses((prev) => (prev ? prev.filter((t) => t.id !== templateId) : prev));
   }
 
   if (!group) {
@@ -210,7 +244,7 @@ export default function GroupDetailPage() {
         )}
 
         <nav className="mb-4 flex gap-8 font-mono text-sm">
-          {(["expenses", "balances", "settle"] as Tab[]).map((t) => (
+          {(["expenses", "balances", "settle", "recurring"] as Tab[]).map((t) => (
             <button
               key={t}
               type="button"
@@ -222,7 +256,13 @@ export default function GroupDetailPage() {
               }
               aria-current={tab === t ? "page" : undefined}
             >
-              {t === "expenses" ? "Expenses" : t === "balances" ? "Balances" : "Settle up"}
+              {t === "expenses"
+                ? "Expenses"
+                : t === "balances"
+                ? "Balances"
+                : t === "settle"
+                ? "Settle up"
+                : "Recurring"}
             </button>
           ))}
         </nav>
@@ -250,6 +290,8 @@ export default function GroupDetailPage() {
                 />
               </Card>
             )}
+
+            <CategoryBreakdownChart breakdown={categoryBreakdown} />
 
             {expenses === null ? (
               <p className="font-mono text-sm text-ink/60">Loading…</p>
@@ -312,6 +354,42 @@ export default function GroupDetailPage() {
                   </li>
                 ))}
               </ul>
+            )}
+          </div>
+        )}
+
+        {tab === "recurring" && (
+          <div>
+            <div className="mb-4 flex items-center justify-end">
+              <button
+                type="button"
+                onClick={() => setShowRecurringForm((s) => !s)}
+                className="font-mono text-sm font-bold text-ledger-green hover:text-ledger-green-dark"
+              >
+                {showRecurringForm ? "Cancel" : "+ New recurring expense"}
+              </button>
+            </div>
+
+            {showRecurringForm && (
+              <Card className="mb-6">
+                <AddRecurringExpenseForm
+                  groupId={groupId}
+                  members={group.members}
+                  onCreated={handleRecurringExpenseCreated}
+                  onCancel={() => setShowRecurringForm(false)}
+                />
+              </Card>
+            )}
+
+            {recurringExpenses === null ? (
+              <p className="font-mono text-sm text-ink/60">Loading…</p>
+            ) : (
+              <RecurringExpensesList
+                groupId={groupId}
+                templates={recurringExpenses}
+                currentUserId={currentUserId}
+                onDeactivated={handleRecurringExpenseDeactivated}
+              />
             )}
           </div>
         )}

@@ -1,4 +1,4 @@
-# Splitwise-lite
+# Splitwise
 
 Group expense splitting app — Next.js frontend, Spring Boot backend, PostgreSQL.
 
@@ -39,5 +39,5 @@ file if the backend isn't on `localhost:8080`.
 
 ## Database
 
-PostgreSQL. Create a local DB named `splitwise_lite`, or point `application.yml`
+PostgreSQL. Create a local DB named `splitwise`, or point `application.yml`
 at a hosted instance (Supabase/Neon/Railway all offer free Postgres tiers).
