@@ -6,6 +6,7 @@ import com.splitwise.entity.ExpenseCategory;
 import com.splitwise.entity.ExpenseShare;
 import com.splitwise.entity.Group;
 import com.splitwise.entity.GroupMember;
+import com.splitwise.entity.NotificationType;
 import com.splitwise.entity.Settlement;
 import com.splitwise.entity.User;
 import com.splitwise.exception.BadRequestException;
@@ -18,6 +19,8 @@ import com.splitwise.repository.GroupRepository;
 import com.splitwise.repository.SettlementRepository;
 import com.splitwise.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -34,6 +37,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class ExpenseService {
 
+    private static final Logger log = LoggerFactory.getLogger(ExpenseService.class);
     private static final BigDecimal EPSILON = new BigDecimal("0.01");
 
     private final ExpenseRepository expenseRepository;
@@ -42,6 +46,7 @@ public class ExpenseService {
     private final GroupMemberRepository groupMemberRepository;
     private final UserRepository userRepository;
     private final SettlementRepository settlementRepository;
+    private final NotificationService notificationService;
 
     @Transactional
     public ExpenseResponse createExpense(String groupId, String payerUserId, CreateExpenseRequest req) {
@@ -83,6 +88,20 @@ public class ExpenseService {
         expense.setShares(shares);
 
         expense = expenseRepository.save(expense);
+
+        String payerName = memberUsersById.get(payerUserId).getName();
+        try {
+            for (ExpenseShare share : expense.getShares()) {
+                String participantId = share.getUser().getId();
+                if (!participantId.equals(payerUserId)) {
+                    notificationService.notify(participantId, NotificationType.EXPENSE_ADDED,
+                            payerName + " added an expense: " + req.description() + " (₹" + req.amount() + ")",
+                            groupId);
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Failed to send EXPENSE_ADDED notifications for expense in group {}", groupId, e);
+        }
 
         return toExpenseResponse(expense);
     }
@@ -150,7 +169,7 @@ public class ExpenseService {
                     BigDecimal owed = owedByUser.getOrDefault(userId, BigDecimal.ZERO);
                     BigDecimal settledReceived = settledReceivedByUser.getOrDefault(userId, BigDecimal.ZERO);
                     BigDecimal settledPaid = settledPaidByUser.getOrDefault(userId, BigDecimal.ZERO);
-                    BigDecimal netBalance = paid.subtract(owed).add(settledReceived).subtract(settledPaid);
+                    BigDecimal netBalance = paid.subtract(owed).subtract(settledReceived).add(settledPaid);
                     return new BalanceResponse(userId, m.getUser().getName(), netBalance);
                 })
                 .toList();
@@ -179,6 +198,14 @@ public class ExpenseService {
                 .build();
 
         settlement = settlementRepository.save(settlement);
+
+        try {
+            String fromUserName = memberUsersById.get(fromUserId).getName();
+            notificationService.notify(req.toUserId(), NotificationType.SETTLEMENT_RECORDED,
+                    fromUserName + " paid you ₹" + req.amount(), groupId);
+        } catch (Exception e) {
+            log.warn("Failed to send SETTLEMENT_RECORDED notification for group {}", groupId, e);
+        }
 
         return toSettlementResponse(settlement);
     }

@@ -3,6 +3,7 @@ package com.splitwise.service;
 import com.splitwise.dto.GroupDtos.*;
 import com.splitwise.entity.Group;
 import com.splitwise.entity.GroupMember;
+import com.splitwise.entity.NotificationType;
 import com.splitwise.entity.User;
 import com.splitwise.exception.BadRequestException;
 import com.splitwise.exception.ForbiddenException;
@@ -11,6 +12,8 @@ import com.splitwise.repository.GroupMemberRepository;
 import com.splitwise.repository.GroupRepository;
 import com.splitwise.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,9 +23,12 @@ import java.util.List;
 @RequiredArgsConstructor
 public class GroupService {
 
+    private static final Logger log = LoggerFactory.getLogger(GroupService.class);
+
     private final GroupRepository groupRepository;
     private final GroupMemberRepository groupMemberRepository;
     private final UserRepository userRepository;
+    private final NotificationService notificationService;
 
     @Transactional
     public GroupResponse createGroup(String creatorUserId, CreateGroupRequest req) {
@@ -89,6 +95,19 @@ public class GroupService {
                 .user(invitee)
                 .build();
         groupMemberRepository.save(membership);
+
+        User adder = members.stream()
+                .filter(m -> m.getUser().getId().equals(requesterUserId))
+                .map(GroupMember::getUser)
+                .findFirst()
+                .orElse(null);
+        String adderName = adder != null ? adder.getName() : "Someone";
+        try {
+            notificationService.notify(invitee.getId(), NotificationType.ADDED_TO_GROUP,
+                    adderName + " added you to " + group.getName(), group.getId());
+        } catch (Exception e) {
+            log.warn("Failed to send ADDED_TO_GROUP notification for group {}", groupId, e);
+        }
 
         List<GroupMember> updatedMembers = groupMemberRepository.findByGroupId(groupId);
         return toGroupResponse(group, updatedMembers);

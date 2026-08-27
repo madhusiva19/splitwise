@@ -71,6 +71,22 @@ export interface SettlementSuggestion {
   amount: number;
 }
 
+export interface RecordSettlementRequest {
+  toUserId: string;
+  amount: number;
+}
+
+export interface SettlementResponse {
+  id: string;
+  groupId: string;
+  fromUserId: string;
+  fromUserName: string;
+  toUserId: string;
+  toUserName: string;
+  amount: number;
+  settledAt: string;
+}
+
 export interface CategoryBreakdown {
   category: ExpenseCategory;
   totalAmount: number;
@@ -94,6 +110,13 @@ export function getBalances(groupId: string): Promise<BalanceResponse[]> {
 
 export function getSettlementSuggestions(groupId: string): Promise<SettlementSuggestion[]> {
   return apiFetch<SettlementSuggestion[]>(`/groups/${groupId}/settlements/suggestions`);
+}
+
+export function recordSettlement(groupId: string, req: RecordSettlementRequest): Promise<SettlementResponse> {
+  return apiFetch<SettlementResponse>(`/groups/${groupId}/settlements`, {
+    method: "POST",
+    body: JSON.stringify(req),
+  });
 }
 
 export function getCategoryBreakdown(groupId: string): Promise<CategoryBreakdown[]> {

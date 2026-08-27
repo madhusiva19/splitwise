@@ -6,6 +6,7 @@ import com.splitwise.dto.RecurringExpenseDtos.RecurringExpenseResponse;
 import com.splitwise.entity.ExpenseCategory;
 import com.splitwise.entity.Group;
 import com.splitwise.entity.GroupMember;
+import com.splitwise.entity.NotificationType;
 import com.splitwise.entity.RecurrenceFrequency;
 import com.splitwise.entity.RecurringExpenseTemplate;
 import com.splitwise.entity.SplitType;
@@ -40,6 +41,7 @@ public class RecurringExpenseService {
     private final GroupRepository groupRepository;
     private final GroupMemberRepository groupMemberRepository;
     private final ExpenseService expenseService;
+    private final NotificationService notificationService;
 
     @Transactional
     public RecurringExpenseResponse createTemplate(String groupId, String creatorUserId, CreateRecurringExpenseRequest req) {
@@ -121,6 +123,19 @@ public class RecurringExpenseService {
 
             expenseService.createExpense(template.getGroup().getId(), template.getPaidBy().getId(), expenseRequest);
             createdCount++;
+
+            try {
+                String paidByUserId = template.getPaidBy().getId();
+                for (String participantId : template.getParticipantUserIds()) {
+                    if (!participantId.equals(paidByUserId)) {
+                        notificationService.notify(participantId, NotificationType.RECURRING_EXPENSE_CREATED,
+                                "Recurring expense auto-added: " + template.getDescription() + " (₹" + template.getAmount() + ")",
+                                template.getGroup().getId());
+                    }
+                }
+            } catch (Exception e) {
+                log.warn("Failed to send RECURRING_EXPENSE_CREATED notifications for template {}", template.getId(), e);
+            }
 
             template.setNextRunAt(computeNextRun(template.getNextRunAt(), template.getFrequency()));
             recurringExpenseTemplateRepository.save(template);

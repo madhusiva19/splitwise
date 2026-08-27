@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Card from "@/components/Card";
 import Field from "@/components/Field";
+import NavBar from "@/components/NavBar";
 import { createGroup, listGroups, GroupSummaryResponse } from "@/lib/groups";
 
 export default function HomePage() {
@@ -58,7 +59,9 @@ export default function HomePage() {
   if (!name) return null;
 
   return (
-    <main className="min-h-screen bg-paper px-4 py-10">
+    <>
+      <NavBar />
+      <main className="min-h-screen bg-paper px-4 py-10">
       <div className="mx-auto max-w-2xl">
         <header className="mb-8">
           <p className="font-mono text-xs uppercase tracking-widest text-ink/60">Welcome back</p>
@@ -138,6 +141,7 @@ export default function HomePage() {
           </ul>
         )}
       </div>
-    </main>
+      </main>
+    </>
   );
 }

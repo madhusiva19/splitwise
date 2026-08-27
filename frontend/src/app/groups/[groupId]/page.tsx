@@ -6,6 +6,7 @@ import Link from "next/link";
 import Card from "@/components/Card";
 import Field from "@/components/Field";
 import Money from "@/components/Money";
+import NavBar from "@/components/NavBar";
 import AddExpenseForm from "@/components/AddExpenseForm";
 import CategoryBreakdownChart from "@/components/CategoryBreakdownChart";
 import AddRecurringExpenseForm from "@/components/AddRecurringExpenseForm";
@@ -16,6 +17,7 @@ import {
   getBalances,
   getSettlementSuggestions,
   getCategoryBreakdown,
+  recordSettlement,
   formatCategory,
   ExpenseResponse,
   BalanceResponse,
@@ -92,6 +94,9 @@ export default function GroupDetailPage() {
   const [showRecurringForm, setShowRecurringForm] = useState(false);
   const [currentUserId, setCurrentUserId] = useState("");
 
+  const [settlingKey, setSettlingKey] = useState<string | null>(null);
+  const [settleError, setSettleError] = useState<string | null>(null);
+
   useEffect(() => {
     const accessToken = localStorage.getItem("accessToken");
     if (!accessToken) {
@@ -149,6 +154,23 @@ export default function GroupDetailPage() {
     getCategoryBreakdown(groupId).then(setCategoryBreakdown).catch(() => {});
   }
 
+  async function handleSettleUp(suggestion: SettlementSuggestion) {
+    const key = `${suggestion.fromUserId}-${suggestion.toUserId}`;
+    setSettleError(null);
+    setSettlingKey(key);
+
+    try {
+      await recordSettlement(groupId, { toUserId: suggestion.toUserId, amount: suggestion.amount });
+      const [b, s] = await Promise.all([getBalances(groupId), getSettlementSuggestions(groupId)]);
+      setBalances(b);
+      setSettlements(s);
+    } catch (err) {
+      setSettleError(err instanceof Error ? err.message : "Failed to record settlement");
+    } finally {
+      setSettlingKey(null);
+    }
+  }
+
   function handleRecurringExpenseCreated(template: RecurringExpenseResponse) {
     setShowRecurringForm(false);
     setRecurringExpenses((prev) => (prev ? [template, ...prev] : [template]));
@@ -160,22 +182,27 @@ export default function GroupDetailPage() {
 
   if (!group) {
     return (
-      <main className="min-h-screen bg-paper px-4 py-10">
-        <div className="mx-auto max-w-2xl">
-          {loadError ? (
-            <p role="alert" className="font-mono text-sm text-debt">
-              {loadError}
-            </p>
-          ) : (
-            <p className="font-mono text-sm text-ink/60">Loading…</p>
-          )}
-        </div>
-      </main>
+      <>
+        <NavBar />
+        <main className="min-h-screen bg-paper px-4 py-10">
+          <div className="mx-auto max-w-2xl">
+            {loadError ? (
+              <p role="alert" className="font-mono text-sm text-debt">
+                {loadError}
+              </p>
+            ) : (
+              <p className="font-mono text-sm text-ink/60">Loading…</p>
+            )}
+          </div>
+        </main>
+      </>
     );
   }
 
   return (
-    <main className="min-h-screen bg-paper px-4 py-10">
+    <>
+      <NavBar />
+      <main className="min-h-screen bg-paper px-4 py-10">
       <div className="mx-auto max-w-2xl">
         <Link
           href="/"
@@ -334,6 +361,12 @@ export default function GroupDetailPage() {
 
         {tab === "settle" && (
           <div>
+            {settleError && (
+              <p role="alert" className="mb-4 font-mono text-sm text-debt">
+                {settleError}
+              </p>
+            )}
+
             {settlements === null ? (
               <p className="font-mono text-sm text-ink/60">Loading…</p>
             ) : settlements.length === 0 ? (
@@ -342,17 +375,33 @@ export default function GroupDetailPage() {
               </p>
             ) : (
               <ul className="space-y-3">
-                {settlements.map((s, i) => (
-                  <li key={`${s.fromUserId}-${s.toUserId}-${i}`}>
-                    <Card>
-                      <p className="font-sans text-sm text-ink">
-                        <span className="font-mono font-bold">{s.fromUserName}</span> pays{" "}
-                        <span className="font-mono font-bold">{s.toUserName}</span>{" "}
-                        <Money amount={s.amount} />
-                      </p>
-                    </Card>
-                  </li>
-                ))}
+                {settlements.map((s, i) => {
+                  const key = `${s.fromUserId}-${s.toUserId}`;
+                  const canSettle = s.fromUserId === currentUserId;
+                  return (
+                    <li key={`${key}-${i}`}>
+                      <Card>
+                        <div className="flex items-center justify-between gap-3">
+                          <p className="font-sans text-sm text-ink">
+                            <span className="font-mono font-bold">{s.fromUserName}</span> pays{" "}
+                            <span className="font-mono font-bold">{s.toUserName}</span>{" "}
+                            <Money amount={s.amount} />
+                          </p>
+                          {canSettle && (
+                            <button
+                              type="button"
+                              onClick={() => handleSettleUp(s)}
+                              disabled={settlingKey === key}
+                              className="whitespace-nowrap font-mono text-xs font-bold text-ledger-green hover:text-ledger-green-dark disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                              {settlingKey === key ? "Recording…" : "Mark as paid"}
+                            </button>
+                          )}
+                        </div>
+                      </Card>
+                    </li>
+                  );
+                })}
               </ul>
             )}
           </div>
@@ -394,6 +443,7 @@ export default function GroupDetailPage() {
           </div>
         )}
       </div>
-    </main>
+      </main>
+    </>
   );
 }
