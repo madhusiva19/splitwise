@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import ThemeToggle from "@/components/ThemeToggle";
 import {
   listNotifications,
   getUnreadCount,
@@ -98,6 +99,8 @@ export default function NavBar() {
           Splitwise
         </Link>
 
+        <div className="flex items-center gap-1">
+        <ThemeToggle />
         <div className="relative" ref={panelRef}>
           <button
             type="button"
@@ -181,6 +184,7 @@ export default function NavBar() {
               </div>
             </div>
           )}
+        </div>
         </div>
       </div>
     </header>

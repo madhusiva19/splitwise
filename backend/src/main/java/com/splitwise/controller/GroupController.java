@@ -41,4 +41,11 @@ public class GroupController {
                                                      @Valid @RequestBody AddMemberRequest request) {
         return ResponseEntity.ok(groupService.addMember(groupId, currentUser.getUserId(), request));
     }
+
+    @DeleteMapping("/{groupId}")
+    public ResponseEntity<Void> deleteGroup(@AuthenticationPrincipal AppUserDetails currentUser,
+                                             @PathVariable String groupId) {
+        groupService.deleteGroup(groupId, currentUser.getUserId());
+        return ResponseEntity.noContent().build();
+    }
 }

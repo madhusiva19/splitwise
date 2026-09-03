@@ -8,8 +8,12 @@ import com.splitwise.entity.User;
 import com.splitwise.exception.BadRequestException;
 import com.splitwise.exception.ForbiddenException;
 import com.splitwise.exception.ResourceNotFoundException;
+import com.splitwise.repository.ExpenseRepository;
 import com.splitwise.repository.GroupMemberRepository;
 import com.splitwise.repository.GroupRepository;
+import com.splitwise.repository.NotificationRepository;
+import com.splitwise.repository.RecurringExpenseTemplateRepository;
+import com.splitwise.repository.SettlementRepository;
 import com.splitwise.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -29,6 +33,10 @@ public class GroupService {
     private final GroupMemberRepository groupMemberRepository;
     private final UserRepository userRepository;
     private final NotificationService notificationService;
+    private final ExpenseRepository expenseRepository;
+    private final SettlementRepository settlementRepository;
+    private final RecurringExpenseTemplateRepository recurringExpenseTemplateRepository;
+    private final NotificationRepository notificationRepository;
 
     @Transactional
     public GroupResponse createGroup(String creatorUserId, CreateGroupRequest req) {
@@ -111,6 +119,27 @@ public class GroupService {
 
         List<GroupMember> updatedMembers = groupMemberRepository.findByGroupId(groupId);
         return toGroupResponse(group, updatedMembers);
+    }
+
+    // No cascade is declared at the DB/entity level, so dependent rows are deleted explicitly,
+    // children before parents, to avoid FK violations. Using repository.deleteAll(list) (not a
+    // bulk delete-by-id query) so JPA still cascades expense shares and recurring-expense
+    // participant rows via their owning-entity relationships.
+    @Transactional
+    public void deleteGroup(String groupId, String requesterUserId) {
+        Group group = groupRepository.findById(groupId)
+                .orElseThrow(() -> new ResourceNotFoundException("Group not found"));
+
+        if (!group.getCreatedBy().getId().equals(requesterUserId)) {
+            throw new ForbiddenException("Only the group creator can delete this group");
+        }
+
+        recurringExpenseTemplateRepository.deleteAll(recurringExpenseTemplateRepository.findByGroupId(groupId));
+        expenseRepository.deleteAll(expenseRepository.findByGroupId(groupId));
+        settlementRepository.deleteAll(settlementRepository.findByGroupId(groupId));
+        notificationRepository.deleteAll(notificationRepository.findByGroupId(groupId));
+        groupMemberRepository.deleteAll(groupMemberRepository.findByGroupId(groupId));
+        groupRepository.delete(group);
     }
 
     // Membership is the gate for all group access — a non-member can't view or modify a group they don't belong to.

@@ -43,3 +43,9 @@ export function addMember(groupId: string, email: string): Promise<GroupResponse
     body: JSON.stringify({ email }),
   });
 }
+
+export function deleteGroup(groupId: string): Promise<void> {
+  return apiFetch<void>(`/groups/${groupId}`, {
+    method: "DELETE",
+  });
+}

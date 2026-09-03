@@ -2,9 +2,38 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --color-paper: 250 246 238;
+  --color-ink: 34 38 31;
+  --color-ledger-green: 47 111 78;
+  --color-ledger-green-dark: 35 79 56;
+  --color-debt: 179 73 47;
+  --color-line: 216 208 188;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --color-paper: 26 24 21;
+    --color-ink: 237 232 220;
+    --color-ledger-green: 79 174 124;
+    --color-ledger-green-dark: 61 140 99;
+    --color-debt: 224 120 86;
+    --color-line: 58 54 46;
+  }
+}
+
+:root[data-theme="dark"] {
+  --color-paper: 26 24 21;
+  --color-ink: 237 232 220;
+  --color-ledger-green: 79 174 124;
+  --color-ledger-green-dark: 61 140 99;
+  --color-debt: 224 120 86;
+  --color-line: 58 54 46;
+}
+
 @layer base {
   body {
-    @apply bg-paper text-ink font-sans;
+    @apply bg-paper text-ink font-sans transition-colors duration-200;
   }
 }
 
@@ -15,8 +44,8 @@
     height: 18px;
     background-image: radial-gradient(
       circle at center,
-      theme("colors.paper") 0 5px,
-      theme("colors.line") 5px 6px,
+      rgb(var(--color-paper)) 0 5px,
+      rgb(var(--color-line)) 5px 6px,
       transparent 6px 100%
     );
     background-size: 22px 22px;
@@ -27,6 +56,6 @@
   /* Dashed "stitch" line used between the Login/Signup tabs, and under the
      perforated edge, to sell the torn-paper look. */
   .stitch-divider {
-    border-top: 2px dashed theme("colors.line");
+    border-top: 2px dashed rgb(var(--color-line));
   }
 }
