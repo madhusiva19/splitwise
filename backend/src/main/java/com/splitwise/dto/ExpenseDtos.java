@@ -27,6 +27,15 @@ public class ExpenseDtos {
             List<ExpenseShareInput> shares
     ) {}
 
+    public record UpdateExpenseRequest(
+            @NotBlank String description,
+            @NotNull @Positive BigDecimal amount,
+            @NotNull SplitType splitType,
+            ExpenseCategory category,
+            @NotEmpty List<String> participantUserIds,
+            List<ExpenseShareInput> shares
+    ) {}
+
     public record ExpenseShareResponse(
             String userId,
             String userName,

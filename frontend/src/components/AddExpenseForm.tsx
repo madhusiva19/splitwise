@@ -4,6 +4,7 @@ import { useMemo, useState, FormEvent } from "react";
 import Field from "@/components/Field";
 import {
   createExpense,
+  updateExpense,
   CreateExpenseRequest,
   ExpenseCategory,
   ExpenseResponse,
@@ -16,17 +17,32 @@ import { GroupMember } from "@/lib/groups";
 interface AddExpenseFormProps {
   groupId: string;
   members: GroupMember[];
-  onCreated: (expense: ExpenseResponse) => void;
+  expense?: ExpenseResponse;
+  onSaved: (expense: ExpenseResponse) => void;
   onCancel: () => void;
 }
 
-export default function AddExpenseForm({ groupId, members, onCreated, onCancel }: AddExpenseFormProps) {
-  const [description, setDescription] = useState("");
-  const [amount, setAmount] = useState("");
-  const [splitType, setSplitType] = useState<SplitType>("EQUAL");
-  const [category, setCategory] = useState<ExpenseCategory | undefined>(undefined);
-  const [participantIds, setParticipantIds] = useState<string[]>(members.map((m) => m.userId));
-  const [shareInputs, setShareInputs] = useState<Record<string, string>>({});
+export default function AddExpenseForm({ groupId, members, expense, onSaved, onCancel }: AddExpenseFormProps) {
+  const isEditing = !!expense;
+  const [description, setDescription] = useState(expense?.description ?? "");
+  const [amount, setAmount] = useState(expense ? String(expense.amount) : "");
+  const [splitType, setSplitType] = useState<SplitType>(expense?.splitType ?? "EQUAL");
+  const [category, setCategory] = useState<ExpenseCategory | undefined>(expense?.category);
+  const [participantIds, setParticipantIds] = useState<string[]>(
+    expense ? expense.shares.map((s) => s.userId) : members.map((m) => m.userId)
+  );
+  const [shareInputs, setShareInputs] = useState<Record<string, string>>(
+    expense
+      ? Object.fromEntries(
+          expense.shares.map((s) => [
+            s.userId,
+            splitType === "PERCENTAGE"
+              ? String((s.shareAmount / expense.amount) * 100)
+              : String(s.shareAmount),
+          ])
+        )
+      : {}
+  );
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -71,10 +87,12 @@ export default function AddExpenseForm({ groupId, members, onCreated, onCancel }
           ? participantIds.map((id) => ({ userId: id, amount: parseFloat(shareInputs[id]) || 0 }))
           : undefined,
       };
-      const expense = await createExpense(groupId, req);
-      onCreated(expense);
+      const saved = isEditing
+        ? await updateExpense(groupId, expense!.id, req)
+        : await createExpense(groupId, req);
+      onSaved(saved);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to add expense");
+      setError(err instanceof Error ? err.message : `Failed to ${isEditing ? "save" : "add"} expense`);
     } finally {
       setSaving(false);
     }
@@ -197,7 +215,7 @@ export default function AddExpenseForm({ groupId, members, onCreated, onCancel }
           disabled={!canSubmit || saving}
           className="flex-1 rounded-sm bg-ledger-green py-2.5 font-mono text-sm font-bold uppercase tracking-wider text-paper transition-colors hover:bg-ledger-green-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ledger-green disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {saving ? "Saving…" : "Add expense"}
+          {saving ? "Saving…" : isEditing ? "Save changes" : "Add expense"}
         </button>
         <button
           type="button"

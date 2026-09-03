@@ -31,6 +31,22 @@ public class ExpenseController {
         return ResponseEntity.ok(expenseService.listGroupExpenses(groupId, currentUser.getUserId()));
     }
 
+    @PutMapping("/expenses/{expenseId}")
+    public ResponseEntity<ExpenseResponse> updateExpense(@AuthenticationPrincipal AppUserDetails currentUser,
+                                                           @PathVariable String groupId,
+                                                           @PathVariable String expenseId,
+                                                           @Valid @RequestBody UpdateExpenseRequest request) {
+        return ResponseEntity.ok(expenseService.updateExpense(groupId, expenseId, currentUser.getUserId(), request));
+    }
+
+    @DeleteMapping("/expenses/{expenseId}")
+    public ResponseEntity<Void> deleteExpense(@AuthenticationPrincipal AppUserDetails currentUser,
+                                               @PathVariable String groupId,
+                                               @PathVariable String expenseId) {
+        expenseService.deleteExpense(groupId, expenseId, currentUser.getUserId());
+        return ResponseEntity.noContent().build();
+    }
+
     @GetMapping("/balances")
     public ResponseEntity<List<BalanceResponse>> getGroupBalances(@AuthenticationPrincipal AppUserDetails currentUser,
                                                                     @PathVariable String groupId) {

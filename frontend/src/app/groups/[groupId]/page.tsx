@@ -1,23 +1,24 @@
 "use client";
 
-import { useEffect, useState, FormEvent } from "react";
+import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import Card from "@/components/Card";
-import Field from "@/components/Field";
 import Money from "@/components/Money";
 import NavBar from "@/components/NavBar";
 import AddExpenseForm from "@/components/AddExpenseForm";
+import AddMemberForm from "@/components/AddMemberForm";
 import CategoryBreakdownChart from "@/components/CategoryBreakdownChart";
 import AddRecurringExpenseForm from "@/components/AddRecurringExpenseForm";
 import RecurringExpensesList from "@/components/RecurringExpensesList";
-import { getGroup, addMember, GroupResponse } from "@/lib/groups";
+import { getGroup, GroupResponse } from "@/lib/groups";
 import {
   listExpenses,
   getBalances,
   getSettlementSuggestions,
   getCategoryBreakdown,
   recordSettlement,
+  deleteExpense,
   formatCategory,
   ExpenseResponse,
   BalanceResponse,
@@ -31,7 +32,15 @@ import {
 
 type Tab = "expenses" | "balances" | "settle" | "recurring";
 
-function ExpenseItem({ expense }: { expense: ExpenseResponse }) {
+interface ExpenseItemProps {
+  expense: ExpenseResponse;
+  canManage: boolean;
+  onEdit: () => void;
+  onDelete: () => void;
+  deleting: boolean;
+}
+
+function ExpenseItem({ expense, canManage, onEdit, onDelete, deleting }: ExpenseItemProps) {
   const [expanded, setExpanded] = useState(false);
 
   return (
@@ -65,6 +74,26 @@ function ExpenseItem({ expense }: { expense: ExpenseResponse }) {
               </li>
             ))}
           </ul>
+
+          {canManage && (
+            <div className="mt-3 flex gap-4">
+              <button
+                type="button"
+                onClick={onEdit}
+                className="font-mono text-xs font-bold text-ledger-green hover:text-ledger-green-dark"
+              >
+                Edit
+              </button>
+              <button
+                type="button"
+                onClick={onDelete}
+                disabled={deleting}
+                className="font-mono text-xs font-bold text-debt hover:text-debt/80 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {deleting ? "Deleting…" : "Delete"}
+              </button>
+            </div>
+          )}
         </div>
       )}
     </Card>
@@ -86,11 +115,11 @@ export default function GroupDetailPage() {
   const [tab, setTab] = useState<Tab>("expenses");
 
   const [showMemberForm, setShowMemberForm] = useState(false);
-  const [memberEmail, setMemberEmail] = useState("");
-  const [addingMember, setAddingMember] = useState(false);
-  const [memberError, setMemberError] = useState<string | null>(null);
 
   const [showExpenseForm, setShowExpenseForm] = useState(false);
+  const [editingExpense, setEditingExpense] = useState<ExpenseResponse | null>(null);
+  const [deletingExpenseId, setDeletingExpenseId] = useState<string | null>(null);
+  const [expenseActionError, setExpenseActionError] = useState<string | null>(null);
   const [showRecurringForm, setShowRecurringForm] = useState(false);
   const [currentUserId, setCurrentUserId] = useState("");
 
@@ -129,29 +158,49 @@ export default function GroupDetailPage() {
     }
   }
 
-  async function handleAddMember(e: FormEvent) {
-    e.preventDefault();
-    setMemberError(null);
-    setAddingMember(true);
+  async function handleExpenseSaved(expense: ExpenseResponse) {
+    setShowExpenseForm(false);
+    setEditingExpense(null);
 
-    try {
-      const updated = await addMember(groupId, memberEmail);
-      setGroup(updated);
-      setMemberEmail("");
-      setShowMemberForm(false);
-    } catch (err) {
-      setMemberError(err instanceof Error ? err.message : "Failed to add member");
-    } finally {
-      setAddingMember(false);
-    }
+    // Fetch the derived views before touching state, so the expense list and the
+    // balances/settlements/category chart update together in one render instead of
+    // the list changing first and the chart briefly showing stale data.
+    const [b, s, c] = await Promise.all([
+      getBalances(groupId),
+      getSettlementSuggestions(groupId),
+      getCategoryBreakdown(groupId),
+    ]);
+    setExpenses((prev) => {
+      if (!prev) return [expense];
+      const exists = prev.some((e) => e.id === expense.id);
+      return exists ? prev.map((e) => (e.id === expense.id ? expense : e)) : [expense, ...prev];
+    });
+    setBalances(b);
+    setSettlements(s);
+    setCategoryBreakdown(c);
   }
 
-  function handleExpenseCreated(expense: ExpenseResponse) {
-    setShowExpenseForm(false);
-    setExpenses((prev) => (prev ? [expense, ...prev] : [expense]));
-    getBalances(groupId).then(setBalances).catch(() => {});
-    getSettlementSuggestions(groupId).then(setSettlements).catch(() => {});
-    getCategoryBreakdown(groupId).then(setCategoryBreakdown).catch(() => {});
+  async function handleDeleteExpense(expense: ExpenseResponse) {
+    if (!window.confirm(`Delete "${expense.description}"?`)) return;
+    setExpenseActionError(null);
+    setDeletingExpenseId(expense.id);
+
+    try {
+      await deleteExpense(groupId, expense.id);
+      const [b, s, c] = await Promise.all([
+        getBalances(groupId),
+        getSettlementSuggestions(groupId),
+        getCategoryBreakdown(groupId),
+      ]);
+      setExpenses((prev) => (prev ? prev.filter((e) => e.id !== expense.id) : prev));
+      setBalances(b);
+      setSettlements(s);
+      setCategoryBreakdown(c);
+    } catch (err) {
+      setExpenseActionError(err instanceof Error ? err.message : "Failed to delete expense");
+    } finally {
+      setDeletingExpenseId(null);
+    }
   }
 
   async function handleSettleUp(suggestion: SettlementSuggestion) {
@@ -237,30 +286,15 @@ export default function GroupDetailPage() {
 
         {showMemberForm && (
           <Card className="mb-6">
-            <form onSubmit={handleAddMember} className="space-y-4" noValidate>
-              <Field
-                label="Email"
-                type="email"
-                value={memberEmail}
-                onChange={setMemberEmail}
-                placeholder="friend@example.com"
-                required
-              />
-
-              {memberError && (
-                <p role="alert" className="font-mono text-sm text-debt">
-                  {memberError}
-                </p>
-              )}
-
-              <button
-                type="submit"
-                disabled={addingMember}
-                className="w-full rounded-sm bg-ledger-green py-2.5 font-mono text-sm font-bold uppercase tracking-wider text-paper transition-colors hover:bg-ledger-green-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ledger-green disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {addingMember ? "Saving…" : "Add member"}
-              </button>
-            </form>
+            <AddMemberForm
+              groupId={groupId}
+              existingMembers={group.members}
+              onAdded={(updated) => {
+                setGroup(updated);
+                setShowMemberForm(false);
+              }}
+              onCancel={() => setShowMemberForm(false)}
+            />
           </Card>
         )}
 
@@ -300,7 +334,10 @@ export default function GroupDetailPage() {
             <div className="mb-4 flex items-center justify-end">
               <button
                 type="button"
-                onClick={() => setShowExpenseForm((s) => !s)}
+                onClick={() => {
+                  setEditingExpense(null);
+                  setShowExpenseForm((s) => !s);
+                }}
                 className="font-mono text-sm font-bold text-ledger-green hover:text-ledger-green-dark"
               >
                 {showExpenseForm ? "Cancel" : "+ Add expense"}
@@ -312,13 +349,31 @@ export default function GroupDetailPage() {
                 <AddExpenseForm
                   groupId={groupId}
                   members={group.members}
-                  onCreated={handleExpenseCreated}
+                  onSaved={handleExpenseSaved}
                   onCancel={() => setShowExpenseForm(false)}
                 />
               </Card>
             )}
 
+            {editingExpense && (
+              <Card className="mb-6">
+                <AddExpenseForm
+                  groupId={groupId}
+                  members={group.members}
+                  expense={editingExpense}
+                  onSaved={handleExpenseSaved}
+                  onCancel={() => setEditingExpense(null)}
+                />
+              </Card>
+            )}
+
             <CategoryBreakdownChart breakdown={categoryBreakdown} />
+
+            {expenseActionError && (
+              <p role="alert" className="mb-4 font-mono text-sm text-debt">
+                {expenseActionError}
+              </p>
+            )}
 
             {expenses === null ? (
               <p className="font-mono text-sm text-ink/60">Loading…</p>
@@ -328,7 +383,16 @@ export default function GroupDetailPage() {
               <ul className="space-y-3">
                 {expenses.map((expense) => (
                   <li key={expense.id}>
-                    <ExpenseItem expense={expense} />
+                    <ExpenseItem
+                      expense={expense}
+                      canManage={expense.paidByUserId === currentUserId}
+                      onEdit={() => {
+                        setShowExpenseForm(false);
+                        setEditingExpense(expense);
+                      }}
+                      onDelete={() => handleDeleteExpense(expense)}
+                      deleting={deletingExpenseId === expense.id}
+                    />
                   </li>
                 ))}
               </ul>

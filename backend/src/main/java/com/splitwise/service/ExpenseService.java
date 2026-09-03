@@ -106,6 +106,74 @@ public class ExpenseService {
         return toExpenseResponse(expense);
     }
 
+    @Transactional
+    public ExpenseResponse updateExpense(String groupId, String expenseId, String requesterUserId, UpdateExpenseRequest req) {
+        groupRepository.findById(groupId)
+                .orElseThrow(() -> new ResourceNotFoundException("Group not found"));
+        Expense expense = expenseRepository.findById(expenseId)
+                .orElseThrow(() -> new ResourceNotFoundException("Expense not found"));
+        if (!expense.getGroup().getId().equals(groupId)) {
+            throw new ResourceNotFoundException("Expense not found");
+        }
+        List<GroupMember> members = groupMemberRepository.findByGroupId(groupId);
+        requireMembership(members, requesterUserId);
+        if (!expense.getPaidBy().getId().equals(requesterUserId)) {
+            throw new ForbiddenException("Only the person who paid can edit this expense");
+        }
+
+        Map<String, User> memberUsersById = members.stream()
+                .collect(Collectors.toMap(m -> m.getUser().getId(), GroupMember::getUser));
+
+        for (String participantId : req.participantUserIds()) {
+            if (!memberUsersById.containsKey(participantId)) {
+                throw new BadRequestException("User " + participantId + " is not a member of this group");
+            }
+        }
+        if (req.shares() != null) {
+            for (ExpenseShareInput share : req.shares()) {
+                if (!memberUsersById.containsKey(share.userId())) {
+                    throw new BadRequestException("User " + share.userId() + " is not a member of this group");
+                }
+            }
+        }
+
+        expense.setDescription(req.description());
+        expense.setAmount(req.amount());
+        expense.setSplitType(req.splitType());
+        expense.setCategory(req.category() != null ? req.category() : ExpenseCategory.OTHER);
+
+        List<ExpenseShare> newShares = switch (req.splitType()) {
+            case EQUAL -> buildEqualShares(expense, req.amount(), req.participantUserIds(), memberUsersById);
+            case EXACT -> buildExactShares(expense, req.amount(), req.shares(), memberUsersById);
+            case PERCENTAGE -> buildPercentageShares(expense, req.amount(), req.shares(), memberUsersById);
+        };
+        // Mutate the managed collection in place rather than reassigning it, so Hibernate's
+        // orphanRemoval actually deletes the shares that are no longer present.
+        expense.getShares().clear();
+        expense.getShares().addAll(newShares);
+
+        expense = expenseRepository.save(expense);
+        return toExpenseResponse(expense);
+    }
+
+    @Transactional
+    public void deleteExpense(String groupId, String expenseId, String requesterUserId) {
+        groupRepository.findById(groupId)
+                .orElseThrow(() -> new ResourceNotFoundException("Group not found"));
+        Expense expense = expenseRepository.findById(expenseId)
+                .orElseThrow(() -> new ResourceNotFoundException("Expense not found"));
+        if (!expense.getGroup().getId().equals(groupId)) {
+            throw new ResourceNotFoundException("Expense not found");
+        }
+        List<GroupMember> members = groupMemberRepository.findByGroupId(groupId);
+        requireMembership(members, requesterUserId);
+        if (!expense.getPaidBy().getId().equals(requesterUserId)) {
+            throw new ForbiddenException("Only the person who paid can delete this expense");
+        }
+
+        expenseRepository.delete(expense);
+    }
+
     @Transactional(readOnly = true)
     public List<ExpenseResponse> listGroupExpenses(String groupId, String requesterUserId) {
         groupRepository.findById(groupId)

@@ -37,6 +37,8 @@ export interface CreateExpenseRequest {
   shares?: ExpenseShareInput[];
 }
 
+export type UpdateExpenseRequest = CreateExpenseRequest;
+
 export interface ExpenseShareResponse {
   userId: string;
   userName: string;
@@ -102,6 +104,23 @@ export function createExpense(groupId: string, req: CreateExpenseRequest): Promi
 
 export function listExpenses(groupId: string): Promise<ExpenseResponse[]> {
   return apiFetch<ExpenseResponse[]>(`/groups/${groupId}/expenses`);
+}
+
+export function updateExpense(
+  groupId: string,
+  expenseId: string,
+  req: UpdateExpenseRequest
+): Promise<ExpenseResponse> {
+  return apiFetch<ExpenseResponse>(`/groups/${groupId}/expenses/${expenseId}`, {
+    method: "PUT",
+    body: JSON.stringify(req),
+  });
+}
+
+export function deleteExpense(groupId: string, expenseId: string): Promise<void> {
+  return apiFetch<void>(`/groups/${groupId}/expenses/${expenseId}`, {
+    method: "DELETE",
+  });
 }
 
 export function getBalances(groupId: string): Promise<BalanceResponse[]> {
