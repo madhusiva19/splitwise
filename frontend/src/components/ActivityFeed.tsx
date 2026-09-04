@@ -1,4 +1,6 @@
 import Card from "@/components/Card";
+import EmptyState from "@/components/EmptyState";
+import { CardListSkeleton } from "@/components/Skeleton";
 import { ActivityItem, ActivityType } from "@/lib/activity";
 
 const TYPE_LABELS: Record<ActivityType, string> = {
@@ -7,17 +9,23 @@ const TYPE_LABELS: Record<ActivityType, string> = {
   MEMBER_JOINED: "Joined",
 };
 
+const TYPE_BADGE_CLASSES: Record<ActivityType, string> = {
+  EXPENSE_ADDED: "border-line text-ink/60",
+  SETTLEMENT_RECORDED: "border-ledger-green/40 text-ledger-green",
+  MEMBER_JOINED: "border-line text-ink/60",
+};
+
 interface ActivityFeedProps {
   items: ActivityItem[] | null;
 }
 
 export default function ActivityFeed({ items }: ActivityFeedProps) {
   if (items === null) {
-    return <p className="font-mono text-sm text-ink/60">Loading…</p>;
+    return <CardListSkeleton count={4} />;
   }
 
   if (items.length === 0) {
-    return <p className="font-mono text-sm text-ink/60">No activity yet.</p>;
+    return <EmptyState title="No activity yet" hint="Expenses, settlements, and new members show up here." />;
   }
 
   return (
@@ -32,7 +40,9 @@ export default function ActivityFeed({ items }: ActivityFeedProps) {
                 </span>
                 <p className="font-sans text-sm text-ink">{item.message}</p>
               </div>
-              <span className="shrink-0 rounded-full border border-line px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider text-ink/60">
+              <span
+                className={`shrink-0 rounded-full border px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider ${TYPE_BADGE_CLASSES[item.type]}`}
+              >
                 {TYPE_LABELS[item.type]}
               </span>
             </div>

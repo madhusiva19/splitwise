@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, FormEvent } from "react";
 import { addMember, GroupMember, GroupResponse } from "@/lib/groups";
 import { searchUsers, UserSearchResult } from "@/lib/users";
+import ErrorBanner from "@/components/ErrorBanner";
 
 interface AddMemberFormProps {
   groupId: string;
@@ -99,7 +100,7 @@ export default function AddMemberForm({ groupId, existingMembers, onAdded, onCan
         </label>
 
         {showResults && (searching || results.length > 0) && (
-          <ul className="absolute z-10 mt-1 max-h-56 w-full overflow-y-auto border border-line bg-paper shadow-sm">
+          <ul className="absolute z-10 mt-1 max-h-56 w-full overflow-y-auto rounded-sm border border-line bg-paper shadow-sm">
             {searching ? (
               <li className="px-3 py-2 font-mono text-xs text-ink/60">Searching…</li>
             ) : (
@@ -109,7 +110,7 @@ export default function AddMemberForm({ groupId, existingMembers, onAdded, onCan
                     type="button"
                     onMouseDown={(e) => e.preventDefault()}
                     onClick={() => selectUser(user)}
-                    className="flex w-full flex-col items-start px-3 py-2 text-left hover:bg-ledger-green/10"
+                    className="flex w-full flex-col items-start px-3 py-2 text-left transition-colors hover:bg-ledger-green/10 focus-visible:bg-ledger-green/10 focus-visible:outline-none"
                   >
                     <span className="font-sans text-sm text-ink">{user.name}</span>
                     <span className="font-mono text-xs text-ink/60">{user.email}</span>
@@ -121,24 +122,20 @@ export default function AddMemberForm({ groupId, existingMembers, onAdded, onCan
         )}
       </div>
 
-      {error && (
-        <p role="alert" className="font-mono text-sm text-debt">
-          {error}
-        </p>
-      )}
+      {error && <ErrorBanner message={error} />}
 
       <div className="flex gap-3">
         <button
           type="submit"
           disabled={adding || !query.trim()}
-          className="flex-1 rounded-sm bg-ledger-green py-2.5 font-mono text-sm font-bold uppercase tracking-wider text-paper transition-colors hover:bg-ledger-green-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ledger-green disabled:cursor-not-allowed disabled:opacity-60"
+          className="flex-1 rounded-sm bg-ledger-green py-2.5 font-mono text-sm font-bold uppercase tracking-wider text-paper transition-colors hover:bg-ledger-green-dark active:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ledger-green disabled:cursor-not-allowed disabled:opacity-60"
         >
           {adding ? "Adding…" : "Add member"}
         </button>
         <button
           type="button"
           onClick={onCancel}
-          className="rounded-sm border border-line px-4 py-2.5 font-mono text-sm font-bold uppercase tracking-wider text-ink/70 transition-colors hover:text-ink"
+          className="rounded-sm border border-line px-4 py-2.5 font-mono text-sm font-bold uppercase tracking-wider text-ink/70 transition-colors hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ledger-green"
         >
           Cancel
         </button>

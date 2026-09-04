@@ -9,6 +9,8 @@ interface FieldProps {
   required?: boolean;
   minLength?: number;
   autoComplete?: string;
+  error?: string;
+  onBlur?: () => void;
 }
 
 export default function Field({
@@ -20,6 +22,8 @@ export default function Field({
   required,
   minLength,
   autoComplete,
+  error,
+  onBlur,
 }: FieldProps) {
   return (
     <label className="block">
@@ -30,12 +34,17 @@ export default function Field({
         type={type}
         value={value}
         onChange={(e) => onChange(e.target.value)}
+        onBlur={onBlur}
         placeholder={placeholder}
         required={required}
         minLength={minLength}
         autoComplete={autoComplete}
-        className="mt-1 w-full border-0 border-b border-line bg-transparent py-1.5 font-sans text-ink outline-none transition-colors focus:border-ledger-green focus:ring-0"
+        aria-invalid={!!error}
+        className={`mt-1 w-full border-0 border-b bg-transparent py-1.5 font-sans text-ink outline-none transition-colors focus:ring-0 ${
+          error ? "border-debt focus:border-debt" : "border-line focus:border-ledger-green"
+        }`}
       />
+      {error && <span className="mt-1 block font-mono text-xs text-debt">{error}</span>}
     </label>
   );
 }

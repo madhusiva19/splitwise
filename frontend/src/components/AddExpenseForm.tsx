@@ -2,6 +2,8 @@
 
 import { useMemo, useState, FormEvent } from "react";
 import Field from "@/components/Field";
+import ErrorBanner from "@/components/ErrorBanner";
+import SegmentedControl from "@/components/SegmentedControl";
 import {
   createExpense,
   updateExpense,
@@ -13,6 +15,12 @@ import {
   SplitType,
 } from "@/lib/expenses";
 import { GroupMember } from "@/lib/groups";
+
+const SPLIT_TYPE_OPTIONS: { value: SplitType; label: string }[] = [
+  { value: "EQUAL", label: "Equal" },
+  { value: "EXACT", label: "Exact" },
+  { value: "PERCENTAGE", label: "Percent" },
+];
 
 interface AddExpenseFormProps {
   groupId: string;
@@ -45,9 +53,17 @@ export default function AddExpenseForm({ groupId, members, expense, onSaved, onC
   );
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [descriptionTouched, setDescriptionTouched] = useState(false);
+  const [amountTouched, setAmountTouched] = useState(false);
 
   const parsedAmount = parseFloat(amount);
   const needsShares = splitType === "EXACT" || splitType === "PERCENTAGE";
+  const descriptionError =
+    descriptionTouched && description.trim().length === 0 ? "Description is required" : undefined;
+  const amountError =
+    amountTouched && !(Number.isFinite(parsedAmount) && parsedAmount > 0)
+      ? "Enter an amount greater than 0"
+      : undefined;
 
   function toggleParticipant(userId: string) {
     setParticipantIds((prev) =>
@@ -100,37 +116,37 @@ export default function AddExpenseForm({ groupId, members, expense, onSaved, onC
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4" noValidate>
-      <Field
-        label="Description"
-        type="text"
-        value={description}
-        onChange={setDescription}
-        placeholder="Groceries"
-        required
-      />
-      <Field
-        label="Amount"
-        type="number"
-        value={amount}
-        onChange={setAmount}
-        placeholder="0.00"
-        required
-      />
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-[1fr_auto]">
+        <Field
+          label="Description"
+          type="text"
+          value={description}
+          onChange={setDescription}
+          onBlur={() => setDescriptionTouched(true)}
+          error={descriptionError}
+          placeholder="Groceries"
+          required
+        />
+        <div className="sm:w-32">
+          <Field
+            label="Amount"
+            type="number"
+            value={amount}
+            onChange={setAmount}
+            onBlur={() => setAmountTouched(true)}
+            error={amountError}
+            placeholder="0.00"
+            required
+          />
+        </div>
+      </div>
 
-      <label className="block">
-        <span className="block font-mono text-xs uppercase tracking-wider text-ink/70">
-          Split type
-        </span>
-        <select
-          value={splitType}
-          onChange={(e) => setSplitType(e.target.value as SplitType)}
-          className="mt-1 w-full border-0 border-b border-line bg-transparent py-1.5 font-sans text-ink outline-none transition-colors focus:border-ledger-green focus:ring-0"
-        >
-          <option value="EQUAL">Equal</option>
-          <option value="EXACT">Exact amounts</option>
-          <option value="PERCENTAGE">Percentage</option>
-        </select>
-      </label>
+      <SegmentedControl
+        label="Split type"
+        options={SPLIT_TYPE_OPTIONS}
+        value={splitType}
+        onChange={setSplitType}
+      />
 
       <div>
         <span className="mb-2 block font-mono text-xs uppercase tracking-wider text-ink/70">
@@ -145,7 +161,7 @@ export default function AddExpenseForm({ groupId, members, expense, onSaved, onC
                 type="button"
                 onClick={() => setCategory(selected ? undefined : c)}
                 aria-pressed={selected}
-                className={`rounded-full border px-3 py-1 font-mono text-xs transition-colors ${
+                className={`rounded-full border px-3 py-1 font-mono text-xs transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ledger-green ${
                   selected
                     ? "border-ledger-green bg-ledger-green text-paper"
                     : "border-line text-ink/60 hover:text-ink"
@@ -158,7 +174,7 @@ export default function AddExpenseForm({ groupId, members, expense, onSaved, onC
         </div>
       </div>
 
-      <div>
+      <div className="rounded-sm border border-line px-4 py-3">
         <span className="mb-2 block font-mono text-xs uppercase tracking-wider text-ink/70">
           Participants
         </span>
@@ -172,7 +188,7 @@ export default function AddExpenseForm({ groupId, members, expense, onSaved, onC
                     type="checkbox"
                     checked={checked}
                     onChange={() => toggleParticipant(member.userId)}
-                    className="h-4 w-4 border-line text-ledger-green focus:ring-ledger-green"
+                    className="h-4 w-4 rounded-sm border-line text-ledger-green focus:ring-ledger-green"
                   />
                   {member.name}
                 </label>
@@ -188,12 +204,17 @@ export default function AddExpenseForm({ groupId, members, expense, onSaved, onC
                     className="w-24 border-0 border-b border-line bg-transparent py-1 text-right font-sans text-sm text-ink outline-none focus:border-ledger-green focus:ring-0"
                   />
                 )}
+                {!needsShares && checked && Number.isFinite(parsedAmount) && parsedAmount > 0 && participantIds.length > 0 && (
+                  <span className="font-mono text-xs tabular-nums text-ink/50">
+                    ₹{(parsedAmount / participantIds.length).toFixed(2)}
+                  </span>
+                )}
               </div>
             );
           })}
         </div>
         {needsShares && (
-          <p className={`mt-2 font-mono text-xs ${sharesValid ? "text-ink/60" : "text-debt"}`}>
+          <p className={`mt-3 border-t border-line pt-2 font-mono text-xs ${sharesValid ? "text-ink/60" : "text-debt"}`}>
             {splitType === "PERCENTAGE"
               ? `Total: ${shareSum.toFixed(2)}% (must equal 100%)`
               : `Total: ₹${shareSum.toFixed(2)} (must equal ₹${
@@ -203,24 +224,20 @@ export default function AddExpenseForm({ groupId, members, expense, onSaved, onC
         )}
       </div>
 
-      {error && (
-        <p role="alert" className="font-mono text-sm text-debt">
-          {error}
-        </p>
-      )}
+      {error && <ErrorBanner message={error} />}
 
       <div className="flex gap-3">
         <button
           type="submit"
           disabled={!canSubmit || saving}
-          className="flex-1 rounded-sm bg-ledger-green py-2.5 font-mono text-sm font-bold uppercase tracking-wider text-paper transition-colors hover:bg-ledger-green-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ledger-green disabled:cursor-not-allowed disabled:opacity-60"
+          className="flex-1 rounded-sm bg-ledger-green py-2.5 font-mono text-sm font-bold uppercase tracking-wider text-paper transition-colors hover:bg-ledger-green-dark active:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ledger-green disabled:cursor-not-allowed disabled:opacity-60"
         >
           {saving ? "Saving…" : isEditing ? "Save changes" : "Add expense"}
         </button>
         <button
           type="button"
           onClick={onCancel}
-          className="rounded-sm border border-line px-4 py-2.5 font-mono text-sm font-bold uppercase tracking-wider text-ink/70 transition-colors hover:text-ink"
+          className="rounded-sm border border-line px-4 py-2.5 font-mono text-sm font-bold uppercase tracking-wider text-ink/70 transition-colors hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ledger-green"
         >
           Cancel
         </button>

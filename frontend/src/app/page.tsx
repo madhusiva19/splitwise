@@ -5,7 +5,10 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Card from "@/components/Card";
 import Field from "@/components/Field";
-import NavBar from "@/components/NavBar";
+import PageShell from "@/components/PageShell";
+import EmptyState from "@/components/EmptyState";
+import ErrorBanner from "@/components/ErrorBanner";
+import { CardListSkeleton } from "@/components/Skeleton";
 import { createGroup, listGroups, GroupSummaryResponse } from "@/lib/groups";
 
 export default function HomePage() {
@@ -31,6 +34,7 @@ export default function HomePage() {
   }, [router]);
 
   async function refreshGroups() {
+    setLoadError(null);
     try {
       const data = await listGroups();
       setGroups(data);
@@ -59,89 +63,96 @@ export default function HomePage() {
   if (!name) return null;
 
   return (
-    <>
-      <NavBar />
-      <main className="min-h-screen bg-paper px-4 py-10">
-      <div className="mx-auto max-w-2xl">
-        <header className="mb-8">
-          <p className="font-mono text-xs uppercase tracking-widest text-ink/60">Welcome back</p>
-          <h1 className="font-mono text-2xl font-bold text-ink">{name}</h1>
-        </header>
+    <PageShell>
+      <header className="mb-8">
+        <p className="font-mono text-xs uppercase tracking-widest text-ink/60">Welcome back</p>
+        <h1 className="font-mono text-2xl font-bold text-ink sm:text-3xl">{name}</h1>
+      </header>
 
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="font-mono text-sm font-bold uppercase tracking-wider text-ink">
-            Your Groups
-          </h2>
-          <button
-            type="button"
-            onClick={() => setShowForm((s) => !s)}
-            className="font-mono text-sm font-bold text-ledger-green hover:text-ledger-green-dark"
-          >
-            {showForm ? "Cancel" : "+ New Group"}
-          </button>
-        </div>
-
-        {showForm && (
-          <Card className="mb-6">
-            <form onSubmit={handleCreateGroup} className="space-y-4" noValidate>
-              <Field
-                label="Group name"
-                type="text"
-                value={groupName}
-                onChange={setGroupName}
-                placeholder="Goa Trip"
-                required
-              />
-
-              {createError && (
-                <p role="alert" className="font-mono text-sm text-debt">
-                  {createError}
-                </p>
-              )}
-
-              <button
-                type="submit"
-                disabled={creating}
-                className="w-full rounded-sm bg-ledger-green py-2.5 font-mono text-sm font-bold uppercase tracking-wider text-paper transition-colors hover:bg-ledger-green-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ledger-green disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {creating ? "Saving…" : "Create group"}
-              </button>
-            </form>
-          </Card>
-        )}
-
-        {loadError && (
-          <p role="alert" className="mb-4 font-mono text-sm text-debt">
-            {loadError}
-          </p>
-        )}
-
-        {groups === null ? (
-          <p className="font-mono text-sm text-ink/60">Loading…</p>
-        ) : groups.length === 0 ? (
-          <p className="font-mono text-sm text-ink/60">
-            No groups yet — create one to get started.
-          </p>
-        ) : (
-          <ul className="space-y-3">
-            {groups.map((group) => (
-              <li key={group.id}>
-                <Link href={`/groups/${group.id}`}>
-                  <Card className="transition-colors hover:border-ledger-green">
-                    <div className="flex items-center justify-between">
-                      <span className="font-mono text-base font-bold text-ink">{group.name}</span>
-                      <span className="font-mono text-xs uppercase tracking-wider text-ink/60">
-                        {group.memberCount} {group.memberCount === 1 ? "member" : "members"}
-                      </span>
-                    </div>
-                  </Card>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        )}
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <h2 className="font-mono text-sm font-bold uppercase tracking-wider text-ink">
+          Your Groups
+        </h2>
+        <button
+          type="button"
+          onClick={() => setShowForm((s) => !s)}
+          className="rounded-sm font-mono text-sm font-bold text-ledger-green transition-colors hover:text-ledger-green-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ledger-green"
+        >
+          {showForm ? "Cancel" : "+ New Group"}
+        </button>
       </div>
-      </main>
-    </>
+
+      {showForm && (
+        <Card className="mb-6">
+          <form onSubmit={handleCreateGroup} className="space-y-4" noValidate>
+            <Field
+              label="Group name"
+              type="text"
+              value={groupName}
+              onChange={setGroupName}
+              placeholder="Goa Trip"
+              required
+            />
+
+            {createError && <ErrorBanner message={createError} />}
+
+            <button
+              type="submit"
+              disabled={creating}
+              className="w-full rounded-sm bg-ledger-green py-2.5 font-mono text-sm font-bold uppercase tracking-wider text-paper transition-colors hover:bg-ledger-green-dark active:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ledger-green disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {creating ? "Saving…" : "Create group"}
+            </button>
+          </form>
+        </Card>
+      )}
+
+      {loadError && <ErrorBanner className="mb-4" message={loadError} />}
+
+      {groups === null ? (
+        <CardListSkeleton count={3} />
+      ) : groups.length === 0 ? (
+        <EmptyState
+          title="No groups yet"
+          hint="Create a group above to start splitting expenses with friends."
+          icon={
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={1.5}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="h-10 w-10"
+              aria-hidden="true"
+            >
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+              <circle cx="9" cy="7" r="4" />
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
+            </svg>
+          }
+        />
+      ) : (
+        <ul className="space-y-3">
+          {groups.map((group) => (
+            <li key={group.id}>
+              <Link
+                href={`/groups/${group.id}`}
+                className="block rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ledger-green"
+              >
+                <Card className="transition-all hover:border-ledger-green hover:shadow-md">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="truncate font-mono text-base font-bold text-ink">{group.name}</span>
+                    <span className="shrink-0 font-mono text-xs uppercase tracking-wider text-ink/60">
+                      {group.memberCount} {group.memberCount === 1 ? "member" : "members"}
+                    </span>
+                  </div>
+                </Card>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
+    </PageShell>
   );
 }

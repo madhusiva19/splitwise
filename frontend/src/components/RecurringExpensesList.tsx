@@ -3,6 +3,8 @@
 import { useState } from "react";
 import Card from "@/components/Card";
 import Money from "@/components/Money";
+import EmptyState from "@/components/EmptyState";
+import ErrorBanner from "@/components/ErrorBanner";
 import { formatCategory } from "@/lib/expenses";
 import {
   deactivateRecurringExpense,
@@ -66,18 +68,14 @@ function RecurringExpenseItem({
               type="button"
               onClick={handleDeactivate}
               disabled={deactivating}
-              className="rounded-full border border-debt px-3 py-1 font-mono text-xs text-debt transition-colors hover:bg-debt hover:text-paper disabled:cursor-not-allowed disabled:opacity-60"
+              className="rounded-full border border-debt px-3 py-1 font-mono text-xs text-debt transition-colors hover:bg-debt hover:text-paper focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-debt disabled:cursor-not-allowed disabled:opacity-60"
             >
               {deactivating ? "…" : "Cancel"}
             </button>
           )}
         </div>
       </div>
-      {error && (
-        <p role="alert" className="mt-2 font-mono text-xs text-debt">
-          {error}
-        </p>
-      )}
+      {error && <ErrorBanner className="mt-2" message={error} />}
     </Card>
   );
 }
@@ -91,7 +89,12 @@ export default function RecurringExpensesList({
   const active = templates.filter((t) => t.active);
 
   if (active.length === 0) {
-    return <p className="font-mono text-sm text-ink/60">No recurring expenses yet.</p>;
+    return (
+      <EmptyState
+        title="No recurring expenses yet"
+        hint="Set up rent, subscriptions, or anything else that repeats."
+      />
+    );
   }
 
   return (

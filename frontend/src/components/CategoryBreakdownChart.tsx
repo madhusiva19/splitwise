@@ -2,6 +2,7 @@
 
 import { Bar, BarChart, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import Card from "@/components/Card";
+import { Skeleton } from "@/components/Skeleton";
 import { CategoryBreakdown, formatCategory } from "@/lib/expenses";
 import { useTheme } from "@/lib/useTheme";
 
@@ -30,11 +31,18 @@ export default function CategoryBreakdownChart({ breakdown }: CategoryBreakdownC
   if (breakdown === null) {
     return (
       <Card className="mb-6">
-        <p className="font-mono text-sm text-ink/60">Loading…</p>
+        <Skeleton className="mb-4 h-4 w-40" />
+        <div className="space-y-2">
+          <Skeleton className="h-6 w-full" />
+          <Skeleton className="h-6 w-4/5" />
+          <Skeleton className="h-6 w-3/5" />
+        </div>
       </Card>
     );
   }
 
+  // No breakdown card at all yet (nothing to summarize) — the expense list below
+  // already carries its own empty state, so this stays quiet rather than doubling up.
   if (breakdown.length === 0) {
     return null;
   }

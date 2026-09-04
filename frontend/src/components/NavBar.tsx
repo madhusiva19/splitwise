@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import ThemeToggle from "@/components/ThemeToggle";
+import { Skeleton } from "@/components/Skeleton";
 import {
   listNotifications,
   getUnreadCount,
@@ -93,98 +94,107 @@ export default function NavBar() {
   }
 
   return (
-    <header className="border-b border-line bg-paper">
+    <header className="sticky top-0 z-40 border-b border-line bg-paper">
       <div className="mx-auto flex max-w-2xl items-center justify-between px-4 py-4">
-        <Link href="/" className="font-mono text-lg font-bold tracking-tight text-ink">
+        <Link
+          href="/"
+          className="rounded-sm font-mono text-lg font-bold tracking-tight text-ink transition-opacity hover:opacity-80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ledger-green"
+        >
           Splitwise
         </Link>
 
         <div className="flex items-center gap-1">
-        <ThemeToggle />
-        <div className="relative" ref={panelRef}>
-          <button
-            type="button"
-            onClick={togglePanel}
-            aria-label="Notifications"
-            className="relative flex h-9 w-9 items-center justify-center rounded-full text-ink hover:bg-line/30"
-          >
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth={1.75}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="h-5 w-5"
-              aria-hidden="true"
+          <ThemeToggle />
+          <div className="relative" ref={panelRef}>
+            <button
+              type="button"
+              onClick={togglePanel}
+              aria-label="Notifications"
+              className="relative flex h-9 w-9 items-center justify-center rounded-full text-ink transition-colors hover:bg-line/30 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ledger-green"
             >
-              <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
-              <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-            </svg>
-            {unreadCount > 0 && (
-              <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-debt px-1 font-mono text-[10px] font-bold leading-none text-paper">
-                {unreadCount > 99 ? "99+" : unreadCount}
-              </span>
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={1.75}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="h-5 w-5"
+                aria-hidden="true"
+              >
+                <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
+                <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+              </svg>
+              {unreadCount > 0 && (
+                <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-debt px-1 font-mono text-[10px] font-bold leading-none text-paper">
+                  {unreadCount > 99 ? "99+" : unreadCount}
+                </span>
+              )}
+            </button>
+
+            {open && (
+              <div className="absolute right-0 z-50 mt-2 w-80 max-w-[calc(100vw-2rem)] overflow-hidden rounded-sm border border-line bg-paper shadow-sm">
+                <div className="perforated-top" aria-hidden="true" />
+
+                <div className="flex items-center justify-between px-4 pb-3 pt-2">
+                  <h2 className="font-mono text-xs font-bold uppercase tracking-widest text-ink">
+                    Notifications
+                  </h2>
+                  {notifications !== null && notifications.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={handleMarkAllAsRead}
+                      className="rounded-sm font-mono text-xs font-bold text-ledger-green transition-colors hover:text-ledger-green-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ledger-green"
+                    >
+                      Mark all as read
+                    </button>
+                  )}
+                </div>
+                <div className="stitch-divider" aria-hidden="true" />
+
+                <div className="max-h-96 overflow-y-auto">
+                  {notifications === null ? (
+                    <div className="space-y-3 px-4 py-4" aria-busy="true" aria-label="Loading">
+                      <Skeleton className="h-3 w-3/4" />
+                      <Skeleton className="h-3 w-2/3" />
+                      <Skeleton className="h-3 w-1/2" />
+                    </div>
+                  ) : notifications.length === 0 ? (
+                    <p className="px-4 py-8 text-center font-mono text-sm text-ink/60">
+                      No notifications yet.
+                    </p>
+                  ) : (
+                    <ul className="divide-y divide-line/60">
+                      {notifications.map((n) => (
+                        <li key={n.id}>
+                          <button
+                            type="button"
+                            onClick={() => handleNotificationClick(n)}
+                            className="flex w-full items-start gap-2.5 px-4 py-3 text-left transition-colors hover:bg-line/20 focus-visible:bg-line/20 focus-visible:outline-none"
+                          >
+                            <span
+                              className={`mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full ${
+                                n.read ? "bg-transparent" : "bg-ledger-green"
+                              }`}
+                              aria-hidden="true"
+                            />
+                            <span className="min-w-0 flex-1">
+                              <span className={`block font-sans text-sm ${n.read ? "text-ink/50" : "text-ink"}`}>
+                                {n.message}
+                              </span>
+                              <span className="mt-0.5 block font-mono text-[10px] uppercase tracking-wider text-ink/40">
+                                {formatRelativeTime(n.createdAt)}
+                              </span>
+                            </span>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </div>
             )}
-          </button>
-
-          {open && (
-            <div className="absolute right-0 z-50 mt-2 w-80 overflow-hidden rounded-sm border border-line bg-paper shadow-sm">
-              <div className="perforated-top" aria-hidden="true" />
-
-              <div className="flex items-center justify-between px-4 pb-3 pt-2">
-                <h2 className="font-mono text-xs font-bold uppercase tracking-widest text-ink">
-                  Notifications
-                </h2>
-                <button
-                  type="button"
-                  onClick={handleMarkAllAsRead}
-                  className="font-mono text-xs font-bold text-ledger-green hover:text-ledger-green-dark"
-                >
-                  Mark all as read
-                </button>
-              </div>
-              <div className="stitch-divider" aria-hidden="true" />
-
-              <div className="max-h-96 overflow-y-auto">
-                {notifications === null ? (
-                  <p className="px-4 py-6 text-center font-mono text-sm text-ink/60">Loading…</p>
-                ) : notifications.length === 0 ? (
-                  <p className="px-4 py-6 text-center font-mono text-sm text-ink/60">
-                    No notifications yet.
-                  </p>
-                ) : (
-                  <ul className="divide-y divide-line/60">
-                    {notifications.map((n) => (
-                      <li key={n.id}>
-                        <button
-                          type="button"
-                          onClick={() => handleNotificationClick(n)}
-                          className="flex w-full items-start gap-2.5 px-4 py-3 text-left hover:bg-line/20"
-                        >
-                          <span
-                            className={`mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full ${
-                              n.read ? "bg-transparent" : "bg-ledger-green"
-                            }`}
-                            aria-hidden="true"
-                          />
-                          <span className="min-w-0 flex-1">
-                            <span className={`block font-sans text-sm ${n.read ? "text-ink/50" : "text-ink"}`}>
-                              {n.message}
-                            </span>
-                            <span className="mt-0.5 block font-mono text-[10px] uppercase tracking-wider text-ink/40">
-                              {formatRelativeTime(n.createdAt)}
-                            </span>
-                          </span>
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
+          </div>
         </div>
       </div>
     </header>

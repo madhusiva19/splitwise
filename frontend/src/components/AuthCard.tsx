@@ -29,22 +29,22 @@ export default function AuthCard({ mode, children }: AuthCardProps) {
           <nav className="mb-6 flex justify-center gap-8 font-mono text-sm">
             <Link
               href="/login"
-              className={
+              className={`transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ledger-green ${
                 mode === "login"
                   ? "border-b-2 border-ledger-green pb-1 font-bold text-ledger-green"
                   : "pb-1 text-ink/60 hover:text-ink"
-              }
+              }`}
               aria-current={mode === "login" ? "page" : undefined}
             >
               Log in
             </Link>
             <Link
               href="/signup"
-              className={
+              className={`transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ledger-green ${
                 mode === "signup"
                   ? "border-b-2 border-ledger-green pb-1 font-bold text-ledger-green"
                   : "pb-1 text-ink/60 hover:text-ink"
-              }
+              }`}
               aria-current={mode === "signup" ? "page" : undefined}
             >
               Sign up

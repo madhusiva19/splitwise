@@ -1,11 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import Card from "@/components/Card";
 import Money from "@/components/Money";
-import NavBar from "@/components/NavBar";
+import PageShell from "@/components/PageShell";
+import EmptyState from "@/components/EmptyState";
+import ErrorBanner from "@/components/ErrorBanner";
+import { Skeleton, CardListSkeleton } from "@/components/Skeleton";
 import AddExpenseForm from "@/components/AddExpenseForm";
 import AddMemberForm from "@/components/AddMemberForm";
 import CategoryBreakdownChart from "@/components/CategoryBreakdownChart";
@@ -47,20 +50,33 @@ function ExpenseItem({ expense, canManage, onEdit, onDelete, deleting }: Expense
   const [expanded, setExpanded] = useState(false);
 
   return (
-    <Card>
+    <Card className="transition-shadow hover:shadow-md">
       <button
         type="button"
         onClick={() => setExpanded((e) => !e)}
-        className="flex w-full items-center justify-between gap-3 text-left"
+        aria-expanded={expanded}
+        className="-m-2 flex w-full items-center justify-between gap-3 rounded-sm p-2 text-left transition-colors hover:bg-line/10 focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ledger-green"
       >
-        <div>
-          <div className="flex items-center gap-2">
-            <p className="font-mono text-base font-bold text-ink">{expense.description}</p>
-            <span className="rounded-full border border-line px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider text-ink/60">
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={2}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className={`h-3.5 w-3.5 shrink-0 text-ink/40 transition-transform ${expanded ? "rotate-90" : ""}`}
+          aria-hidden="true"
+        >
+          <path d="M9 18l6-6-6-6" />
+        </svg>
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="truncate font-mono text-base font-bold text-ink">{expense.description}</p>
+            <span className="shrink-0 rounded-full border border-line px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider text-ink/60">
               {formatCategory(expense.category)}
             </span>
           </div>
-          <p className="font-mono text-xs uppercase tracking-wider text-ink/60">
+          <p className="truncate font-mono text-xs uppercase tracking-wider text-ink/60">
             Paid by {expense.paidByName} · {new Date(expense.createdAt).toLocaleDateString()}
           </p>
         </div>
@@ -83,7 +99,8 @@ function ExpenseItem({ expense, canManage, onEdit, onDelete, deleting }: Expense
               <button
                 type="button"
                 onClick={onEdit}
-                className="font-mono text-xs font-bold text-ledger-green hover:text-ledger-green-dark"
+                aria-label={`Edit "${expense.description}"`}
+                className="rounded-sm font-mono text-xs font-bold text-ledger-green transition-colors hover:text-ledger-green-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ledger-green"
               >
                 Edit
               </button>
@@ -91,7 +108,8 @@ function ExpenseItem({ expense, canManage, onEdit, onDelete, deleting }: Expense
                 type="button"
                 onClick={onDelete}
                 disabled={deleting}
-                className="font-mono text-xs font-bold text-debt hover:text-debt/80 disabled:cursor-not-allowed disabled:opacity-60"
+                aria-label={`Delete "${expense.description}"`}
+                className="rounded-sm font-mono text-xs font-bold text-debt transition-colors hover:text-debt/80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-debt disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {deleting ? "Deleting…" : "Delete"}
               </button>
@@ -278,56 +296,57 @@ export default function GroupDetailPage() {
     setRecurringExpenses((prev) => (prev ? prev.filter((t) => t.id !== templateId) : prev));
   }
 
+  const balanceSummary = useMemo(() => {
+    if (!balances) return null;
+    const mine = balances.find((b) => b.userId === currentUserId);
+    return mine ? mine.netBalance : 0;
+  }, [balances, currentUserId]);
+
+  const sortedBalances = useMemo(() => {
+    if (!balances) return null;
+    return [...balances].sort((a, b) => Math.abs(b.netBalance) - Math.abs(a.netBalance));
+  }, [balances]);
+
   if (!group) {
     return (
-      <>
-        <NavBar />
-        <main className="min-h-screen bg-paper px-4 py-10">
-          <div className="mx-auto max-w-2xl">
-            {loadError ? (
-              <p role="alert" className="font-mono text-sm text-debt">
-                {loadError}
-              </p>
-            ) : (
-              <p className="font-mono text-sm text-ink/60">Loading…</p>
-            )}
+      <PageShell>
+        {loadError ? (
+          <ErrorBanner message={loadError} />
+        ) : (
+          <div className="space-y-4">
+            <Skeleton className="h-8 w-1/2" />
+            <Skeleton className="h-4 w-1/3" />
+            <CardListSkeleton count={3} />
           </div>
-        </main>
-      </>
+        )}
+      </PageShell>
     );
   }
 
   return (
-    <>
-      <NavBar />
-      <main className="min-h-screen bg-paper px-4 py-10">
-      <div className="mx-auto max-w-2xl">
+    <PageShell>
         <Link
           href="/"
-          className="mb-6 inline-block font-mono text-xs uppercase tracking-wider text-ink/60 hover:text-ink"
+          className="mb-6 inline-flex items-center gap-1 rounded-sm font-mono text-xs uppercase tracking-wider text-ink/60 transition-colors hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ledger-green"
         >
           ← Your groups
         </Link>
 
         <header className="mb-6">
-          <div className="flex items-start justify-between gap-3">
-            <h1 className="font-mono text-2xl font-bold text-ink">{group.name}</h1>
+          <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1">
+            <h1 className="break-words font-mono text-2xl font-bold text-ink sm:text-3xl">{group.name}</h1>
             {group.createdByUserId === currentUserId && (
               <button
                 type="button"
                 onClick={handleDeleteGroup}
                 disabled={deletingGroup}
-                className="whitespace-nowrap font-mono text-xs font-bold text-debt hover:text-debt/80 disabled:cursor-not-allowed disabled:opacity-60"
+                className="whitespace-nowrap rounded-sm font-mono text-xs font-bold text-debt transition-colors hover:text-debt/80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-debt disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {deletingGroup ? "Deleting…" : "Delete group"}
               </button>
             )}
           </div>
-          {deleteGroupError && (
-            <p role="alert" className="mt-2 font-mono text-sm text-debt">
-              {deleteGroupError}
-            </p>
-          )}
+          {deleteGroupError && <ErrorBanner className="mt-2" message={deleteGroupError} />}
           <div className="mt-3 flex flex-wrap items-center gap-2">
             {group.members.map((m) => (
               <span
@@ -343,7 +362,7 @@ export default function GroupDetailPage() {
             <button
               type="button"
               onClick={() => setShowMemberForm((s) => !s)}
-              className="font-mono text-xs font-bold text-ledger-green hover:text-ledger-green-dark"
+              className="rounded-sm font-mono text-xs font-bold text-ledger-green transition-colors hover:text-ledger-green-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ledger-green"
             >
               {showMemberForm ? "Cancel" : "+ Add member"}
             </button>
@@ -365,49 +384,55 @@ export default function GroupDetailPage() {
           </Card>
         )}
 
-        {loadError && (
-          <p role="alert" className="mb-4 font-mono text-sm text-debt">
-            {loadError}
-          </p>
-        )}
+        {loadError && <ErrorBanner className="mb-4" message={loadError} />}
 
-        <nav className="mb-4 flex gap-8 font-mono text-sm">
-          {(["expenses", "balances", "settle", "recurring", "activity"] as Tab[]).map((t) => (
-            <button
-              key={t}
-              type="button"
-              onClick={() => setTab(t)}
-              className={
-                tab === t
-                  ? "border-b-2 border-ledger-green pb-1 font-bold text-ledger-green"
-                  : "pb-1 text-ink/60 hover:text-ink"
-              }
-              aria-current={tab === t ? "page" : undefined}
-            >
-              {t === "expenses"
-                ? "Expenses"
-                : t === "balances"
-                ? "Balances"
-                : t === "settle"
-                ? "Settle up"
-                : t === "recurring"
-                ? "Recurring"
-                : "Activity"}
-            </button>
-          ))}
+        <nav className="-mx-4 mb-4 overflow-x-auto px-4">
+          <div className="flex gap-6 whitespace-nowrap font-mono text-sm sm:gap-8">
+            {(["expenses", "balances", "settle", "recurring", "activity"] as Tab[]).map((t) => (
+              <button
+                key={t}
+                type="button"
+                onClick={() => setTab(t)}
+                className={`rounded-sm pb-1 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ledger-green ${
+                  tab === t
+                    ? "border-b-2 border-ledger-green font-bold text-ledger-green"
+                    : "border-b-2 border-transparent text-ink/60 hover:text-ink"
+                }`}
+                aria-current={tab === t ? "page" : undefined}
+              >
+                {t === "expenses"
+                  ? "Expenses"
+                  : t === "balances"
+                  ? "Balances"
+                  : t === "settle"
+                  ? "Settle up"
+                  : t === "recurring"
+                  ? "Recurring"
+                  : "Activity"}
+              </button>
+            ))}
+          </div>
         </nav>
         <div className="stitch-divider mb-6" aria-hidden="true" />
 
         {tab === "expenses" && (
           <div>
-            <div className="mb-4 flex items-center justify-end">
+            <div className="mb-4 flex items-center justify-between gap-3">
+              {expenses !== null && expenses.length > 0 && (
+                <p className="font-mono text-xs uppercase tracking-wider text-ink/60">
+                  {expenses.length} {expenses.length === 1 ? "expense" : "expenses"} · Total{" "}
+                  <span className="font-bold text-ink">
+                    ₹{expenses.reduce((sum, e) => sum + e.amount, 0).toFixed(2)}
+                  </span>
+                </p>
+              )}
               <button
                 type="button"
                 onClick={() => {
                   setEditingExpense(null);
                   setShowExpenseForm((s) => !s);
                 }}
-                className="font-mono text-sm font-bold text-ledger-green hover:text-ledger-green-dark"
+                className="ml-auto rounded-sm font-mono text-sm font-bold text-ledger-green transition-colors hover:text-ledger-green-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ledger-green"
               >
                 {showExpenseForm ? "Cancel" : "+ Add expense"}
               </button>
@@ -438,16 +463,15 @@ export default function GroupDetailPage() {
 
             <CategoryBreakdownChart breakdown={categoryBreakdown} />
 
-            {expenseActionError && (
-              <p role="alert" className="mb-4 font-mono text-sm text-debt">
-                {expenseActionError}
-              </p>
-            )}
+            {expenseActionError && <ErrorBanner className="mb-4" message={expenseActionError} />}
 
             {expenses === null ? (
-              <p className="font-mono text-sm text-ink/60">Loading…</p>
+              <CardListSkeleton count={3} />
             ) : expenses.length === 0 ? (
-              <p className="font-mono text-sm text-ink/60">No expenses yet.</p>
+              <EmptyState
+                title="No expenses yet"
+                hint="Add the first expense to start tracking who paid for what."
+              />
             ) : (
               <ul className="space-y-3">
                 {expenses.map((expense) => (
@@ -472,33 +496,77 @@ export default function GroupDetailPage() {
         {tab === "balances" && (
           <div>
             {balances !== null && balances.length > 0 && (
-              <div className="mb-4 flex items-center justify-end">
-                <button
-                  type="button"
-                  onClick={handleExportBalancesCsv}
-                  className="font-mono text-sm font-bold text-ledger-green hover:text-ledger-green-dark"
-                >
-                  Export CSV
-                </button>
-              </div>
+              <>
+                {balanceSummary !== null && Math.abs(balanceSummary) > 0.004 && (
+                  <div
+                    className={`mb-4 rounded-sm border px-4 py-3 ${
+                      balanceSummary > 0
+                        ? "border-ledger-green/40 bg-ledger-green/10"
+                        : "border-debt/40 bg-debt/10"
+                    }`}
+                  >
+                    <p className="font-sans text-sm text-ink">
+                      {balanceSummary > 0 ? (
+                        <>
+                          Overall, you&rsquo;re owed{" "}
+                          <span className="font-mono font-bold text-ledger-green">
+                            ₹{balanceSummary.toFixed(2)}
+                          </span>
+                        </>
+                      ) : (
+                        <>
+                          Overall, you owe{" "}
+                          <span className="font-mono font-bold text-debt">₹{Math.abs(balanceSummary).toFixed(2)}</span>
+                        </>
+                      )}
+                    </p>
+                  </div>
+                )}
+
+                <div className="mb-4 flex items-center justify-end">
+                  <button
+                    type="button"
+                    onClick={handleExportBalancesCsv}
+                    className="rounded-sm font-mono text-sm font-bold text-ledger-green transition-colors hover:text-ledger-green-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ledger-green"
+                  >
+                    Export CSV
+                  </button>
+                </div>
+              </>
             )}
 
             {balances === null ? (
-              <p className="font-mono text-sm text-ink/60">Loading…</p>
+              <CardListSkeleton count={3} />
             ) : balances.length === 0 ? (
-              <p className="font-mono text-sm text-ink/60">No balances yet.</p>
+              <EmptyState title="No balances yet" hint="Balances appear once expenses are added." />
             ) : (
               <ul className="space-y-3">
-                {balances.map((b) => (
-                  <li key={b.userId}>
-                    <Card>
-                      <div className="flex items-center justify-between">
-                        <span className="font-sans text-sm text-ink">{b.userName}</span>
-                        <Money amount={b.netBalance} showSign />
-                      </div>
-                    </Card>
-                  </li>
-                ))}
+                {sortedBalances!.map((b) => {
+                  const isSettled = Math.abs(b.netBalance) < 0.004;
+                  return (
+                    <li key={b.userId}>
+                      <Card
+                        className={`border-l-[3px] ${
+                          isSettled
+                            ? "border-l-line"
+                            : b.netBalance > 0
+                            ? "border-l-ledger-green"
+                            : "border-l-debt"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-3">
+                          <div>
+                            <span className="block font-sans text-sm font-medium text-ink">{b.userName}</span>
+                            <span className="block font-mono text-[11px] uppercase tracking-wider text-ink/50">
+                              {isSettled ? "Settled up" : b.netBalance > 0 ? "Is owed" : "Owes"}
+                            </span>
+                          </div>
+                          <Money amount={b.netBalance} showSign />
+                        </div>
+                      </Card>
+                    </li>
+                  );
+                })}
               </ul>
             )}
           </div>
@@ -506,18 +574,29 @@ export default function GroupDetailPage() {
 
         {tab === "settle" && (
           <div>
-            {settleError && (
-              <p role="alert" className="mb-4 font-mono text-sm text-debt">
-                {settleError}
-              </p>
-            )}
+            {settleError && <ErrorBanner className="mb-4" message={settleError} />}
 
             {settlements === null ? (
-              <p className="font-mono text-sm text-ink/60">Loading…</p>
+              <CardListSkeleton count={2} />
             ) : settlements.length === 0 ? (
-              <p className="font-mono text-sm text-ink/60">
-                All settled up — no payments needed.
-              </p>
+              <EmptyState
+                title="All settled up"
+                hint="No payments are needed right now."
+                icon={
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth={1.5}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="h-10 w-10"
+                    aria-hidden="true"
+                  >
+                    <path d="M20 6 9 17l-5-5" />
+                  </svg>
+                }
+              />
             ) : (
               <ul className="space-y-3">
                 {settlements.map((s, i) => {
@@ -527,9 +606,21 @@ export default function GroupDetailPage() {
                     <li key={`${key}-${i}`}>
                       <Card>
                         <div className="flex items-center justify-between gap-3">
-                          <p className="font-sans text-sm text-ink">
-                            <span className="font-mono font-bold">{s.fromUserName}</span> pays{" "}
-                            <span className="font-mono font-bold">{s.toUserName}</span>{" "}
+                          <p className="flex flex-wrap items-center gap-x-1.5 font-sans text-sm text-ink">
+                            <span className="font-mono font-bold">{s.fromUserName}</span>
+                            <svg
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth={2}
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              className="h-3.5 w-3.5 text-ink/40"
+                              aria-hidden="true"
+                            >
+                              <path d="M5 12h14M13 6l6 6-6 6" />
+                            </svg>
+                            <span className="font-mono font-bold">{s.toUserName}</span>
                             <Money amount={s.amount} />
                           </p>
                           {canSettle && (
@@ -537,7 +628,7 @@ export default function GroupDetailPage() {
                               type="button"
                               onClick={() => handleSettleUp(s)}
                               disabled={settlingKey === key}
-                              className="whitespace-nowrap font-mono text-xs font-bold text-ledger-green hover:text-ledger-green-dark disabled:cursor-not-allowed disabled:opacity-60"
+                              className="whitespace-nowrap rounded-sm font-mono text-xs font-bold text-ledger-green transition-colors hover:text-ledger-green-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ledger-green disabled:cursor-not-allowed disabled:opacity-60"
                             >
                               {settlingKey === key ? "Recording…" : "Mark as paid"}
                             </button>
@@ -558,7 +649,7 @@ export default function GroupDetailPage() {
               <button
                 type="button"
                 onClick={() => setShowRecurringForm((s) => !s)}
-                className="font-mono text-sm font-bold text-ledger-green hover:text-ledger-green-dark"
+                className="rounded-sm font-mono text-sm font-bold text-ledger-green transition-colors hover:text-ledger-green-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ledger-green"
               >
                 {showRecurringForm ? "Cancel" : "+ New recurring expense"}
               </button>
@@ -576,7 +667,7 @@ export default function GroupDetailPage() {
             )}
 
             {recurringExpenses === null ? (
-              <p className="font-mono text-sm text-ink/60">Loading…</p>
+              <CardListSkeleton count={2} />
             ) : (
               <RecurringExpensesList
                 groupId={groupId}
@@ -589,8 +680,6 @@ export default function GroupDetailPage() {
         )}
 
         {tab === "activity" && <ActivityFeed items={activity} />}
-      </div>
-      </main>
-    </>
+    </PageShell>
   );
 }

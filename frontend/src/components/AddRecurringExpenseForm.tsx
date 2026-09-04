@@ -2,6 +2,8 @@
 
 import { useState, FormEvent } from "react";
 import Field from "@/components/Field";
+import ErrorBanner from "@/components/ErrorBanner";
+import SegmentedControl from "@/components/SegmentedControl";
 import { EXPENSE_CATEGORIES, ExpenseCategory, formatCategory } from "@/lib/expenses";
 import { GroupMember } from "@/lib/groups";
 import {
@@ -10,6 +12,11 @@ import {
   RecurrenceFrequency,
   RecurringExpenseResponse,
 } from "@/lib/recurringExpenses";
+
+const FREQUENCY_OPTIONS: { value: RecurrenceFrequency; label: string }[] = [
+  { value: "WEEKLY", label: "Weekly" },
+  { value: "MONTHLY", label: "Monthly" },
+];
 
 interface AddRecurringExpenseFormProps {
   groupId: string;
@@ -88,31 +95,7 @@ export default function AddRecurringExpenseForm({
         required
       />
 
-      <div>
-        <span className="mb-2 block font-mono text-xs uppercase tracking-wider text-ink/70">
-          Repeats
-        </span>
-        <div className="flex gap-2">
-          {(["WEEKLY", "MONTHLY"] as RecurrenceFrequency[]).map((f) => {
-            const selected = frequency === f;
-            return (
-              <button
-                key={f}
-                type="button"
-                onClick={() => setFrequency(f)}
-                aria-pressed={selected}
-                className={`rounded-full border px-3 py-1 font-mono text-xs transition-colors ${
-                  selected
-                    ? "border-ledger-green bg-ledger-green text-paper"
-                    : "border-line text-ink/60 hover:text-ink"
-                }`}
-              >
-                {f === "WEEKLY" ? "Weekly" : "Monthly"}
-              </button>
-            );
-          })}
-        </div>
-      </div>
+      <SegmentedControl label="Repeats" options={FREQUENCY_OPTIONS} value={frequency} onChange={setFrequency} />
 
       <div>
         <span className="mb-2 block font-mono text-xs uppercase tracking-wider text-ink/70">
@@ -127,7 +110,7 @@ export default function AddRecurringExpenseForm({
                 type="button"
                 onClick={() => setCategory(selected ? undefined : c)}
                 aria-pressed={selected}
-                className={`rounded-full border px-3 py-1 font-mono text-xs transition-colors ${
+                className={`rounded-full border px-3 py-1 font-mono text-xs transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ledger-green ${
                   selected
                     ? "border-ledger-green bg-ledger-green text-paper"
                     : "border-line text-ink/60 hover:text-ink"
@@ -140,7 +123,7 @@ export default function AddRecurringExpenseForm({
         </div>
       </div>
 
-      <div>
+      <div className="rounded-sm border border-line px-4 py-3">
         <span className="mb-2 block font-mono text-xs uppercase tracking-wider text-ink/70">
           Participants (split equally)
         </span>
@@ -151,7 +134,7 @@ export default function AddRecurringExpenseForm({
                 type="checkbox"
                 checked={participantIds.includes(member.userId)}
                 onChange={() => toggleParticipant(member.userId)}
-                className="h-4 w-4 border-line text-ledger-green focus:ring-ledger-green"
+                className="h-4 w-4 rounded-sm border-line text-ledger-green focus:ring-ledger-green"
               />
               {member.name}
             </label>
@@ -159,24 +142,20 @@ export default function AddRecurringExpenseForm({
         </div>
       </div>
 
-      {error && (
-        <p role="alert" className="font-mono text-sm text-debt">
-          {error}
-        </p>
-      )}
+      {error && <ErrorBanner message={error} />}
 
       <div className="flex gap-3">
         <button
           type="submit"
           disabled={!canSubmit || saving}
-          className="flex-1 rounded-sm bg-ledger-green py-2.5 font-mono text-sm font-bold uppercase tracking-wider text-paper transition-colors hover:bg-ledger-green-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ledger-green disabled:cursor-not-allowed disabled:opacity-60"
+          className="flex-1 rounded-sm bg-ledger-green py-2.5 font-mono text-sm font-bold uppercase tracking-wider text-paper transition-colors hover:bg-ledger-green-dark active:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ledger-green disabled:cursor-not-allowed disabled:opacity-60"
         >
           {saving ? "Saving…" : "Add recurring expense"}
         </button>
         <button
           type="button"
           onClick={onCancel}
-          className="rounded-sm border border-line px-4 py-2.5 font-mono text-sm font-bold uppercase tracking-wider text-ink/70 transition-colors hover:text-ink"
+          className="rounded-sm border border-line px-4 py-2.5 font-mono text-sm font-bold uppercase tracking-wider text-ink/70 transition-colors hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ledger-green"
         >
           Cancel
         </button>
