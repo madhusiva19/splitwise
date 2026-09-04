@@ -15,6 +15,7 @@ import CategoryBreakdownChart from "@/components/CategoryBreakdownChart";
 import AddRecurringExpenseForm from "@/components/AddRecurringExpenseForm";
 import RecurringExpensesList from "@/components/RecurringExpensesList";
 import ActivityFeed from "@/components/ActivityFeed";
+import ConfirmDialog from "@/components/ConfirmDialog";
 import { getGroup, deleteGroup, GroupResponse } from "@/lib/groups";
 import { downloadCsv } from "@/lib/csv";
 import {
@@ -26,6 +27,7 @@ import {
   deleteExpense,
   formatCategory,
   ExpenseResponse,
+  ExpenseCategory,
   BalanceResponse,
   SettlementSuggestion,
   CategoryBreakdown,
@@ -139,11 +141,15 @@ export default function GroupDetailPage() {
   const [showMemberForm, setShowMemberForm] = useState(false);
   const [deletingGroup, setDeletingGroup] = useState(false);
   const [deleteGroupError, setDeleteGroupError] = useState<string | null>(null);
+  const [showDeleteGroupDialog, setShowDeleteGroupDialog] = useState(false);
 
   const [showExpenseForm, setShowExpenseForm] = useState(false);
   const [editingExpense, setEditingExpense] = useState<ExpenseResponse | null>(null);
   const [deletingExpenseId, setDeletingExpenseId] = useState<string | null>(null);
   const [expenseActionError, setExpenseActionError] = useState<string | null>(null);
+  const [expenseSearch, setExpenseSearch] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState<ExpenseCategory | null>(null);
+  const [visibleExpenseCount, setVisibleExpenseCount] = useState(10);
   const [showRecurringForm, setShowRecurringForm] = useState(false);
   const [currentUserId, setCurrentUserId] = useState("");
 
@@ -255,9 +261,8 @@ export default function GroupDetailPage() {
     }
   }
 
-  async function handleDeleteGroup() {
+  async function handleConfirmDeleteGroup() {
     if (!group) return;
-    if (!window.confirm(`Delete "${group.name}"? This removes all its expenses, settlements, and history for everyone.`)) return;
     setDeleteGroupError(null);
     setDeletingGroup(true);
 
@@ -267,6 +272,7 @@ export default function GroupDetailPage() {
     } catch (err) {
       setDeleteGroupError(err instanceof Error ? err.message : "Failed to delete group");
       setDeletingGroup(false);
+      setShowDeleteGroupDialog(false);
     }
   }
 
@@ -307,6 +313,23 @@ export default function GroupDetailPage() {
     return [...balances].sort((a, b) => Math.abs(b.netBalance) - Math.abs(a.netBalance));
   }, [balances]);
 
+  const filteredExpenses = useMemo(() => {
+    if (!expenses) return null;
+    const query = expenseSearch.trim().toLowerCase();
+    return expenses.filter((e) => {
+      const matchesQuery = query.length === 0 || e.description.toLowerCase().includes(query);
+      const matchesCategory = categoryFilter === null || e.category === categoryFilter;
+      return matchesQuery && matchesCategory;
+    });
+  }, [expenses, expenseSearch, categoryFilter]);
+
+  const expensesFiltered = expenseSearch.trim().length > 0 || categoryFilter !== null;
+
+  function handleCategoryChartClick(category: ExpenseCategory) {
+    setCategoryFilter((prev) => (prev === category ? null : category));
+    setVisibleExpenseCount(10);
+  }
+
   if (!group) {
     return (
       <PageShell>
@@ -338,7 +361,7 @@ export default function GroupDetailPage() {
             {group.createdByUserId === currentUserId && (
               <button
                 type="button"
-                onClick={handleDeleteGroup}
+                onClick={() => setShowDeleteGroupDialog(true)}
                 disabled={deletingGroup}
                 className="whitespace-nowrap rounded-sm font-mono text-xs font-bold text-debt transition-colors hover:text-debt/80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-debt disabled:cursor-not-allowed disabled:opacity-60"
               >
@@ -420,9 +443,12 @@ export default function GroupDetailPage() {
             <div className="mb-4 flex items-center justify-between gap-3">
               {expenses !== null && expenses.length > 0 && (
                 <p className="font-mono text-xs uppercase tracking-wider text-ink/60">
-                  {expenses.length} {expenses.length === 1 ? "expense" : "expenses"} · Total{" "}
+                  {expensesFiltered && filteredExpenses
+                    ? `${filteredExpenses.length} of ${expenses.length} expenses`
+                    : `${expenses.length} ${expenses.length === 1 ? "expense" : "expenses"}`}{" "}
+                  · Total{" "}
                   <span className="font-bold text-ink">
-                    ₹{expenses.reduce((sum, e) => sum + e.amount, 0).toFixed(2)}
+                    ₹{(filteredExpenses ?? expenses).reduce((sum, e) => sum + e.amount, 0).toFixed(2)}
                   </span>
                 </p>
               )}
@@ -461,9 +487,38 @@ export default function GroupDetailPage() {
               </Card>
             )}
 
-            <CategoryBreakdownChart breakdown={categoryBreakdown} />
+            <CategoryBreakdownChart
+              breakdown={categoryBreakdown}
+              activeCategory={categoryFilter}
+              onCategoryClick={handleCategoryChartClick}
+            />
 
             {expenseActionError && <ErrorBanner className="mb-4" message={expenseActionError} />}
+
+            {expenses !== null && expenses.length > 0 && (
+              <div className="mb-4 flex flex-wrap items-center gap-2">
+                <input
+                  type="search"
+                  value={expenseSearch}
+                  onChange={(e) => {
+                    setExpenseSearch(e.target.value);
+                    setVisibleExpenseCount(10);
+                  }}
+                  placeholder="Search expenses…"
+                  className="min-w-0 flex-1 rounded-sm border border-line bg-transparent px-3 py-1.5 font-sans text-sm text-ink outline-none transition-colors focus:border-ledger-green"
+                />
+                {categoryFilter && (
+                  <button
+                    type="button"
+                    onClick={() => handleCategoryChartClick(categoryFilter)}
+                    className="flex items-center gap-1.5 rounded-full border border-ledger-green bg-ledger-green/10 px-3 py-1 font-mono text-xs text-ledger-green transition-colors hover:bg-ledger-green/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ledger-green"
+                  >
+                    {formatCategory(categoryFilter)}
+                    <span aria-hidden="true">×</span>
+                  </button>
+                )}
+              </div>
+            )}
 
             {expenses === null ? (
               <CardListSkeleton count={3} />
@@ -472,23 +527,41 @@ export default function GroupDetailPage() {
                 title="No expenses yet"
                 hint="Add the first expense to start tracking who paid for what."
               />
+            ) : filteredExpenses && filteredExpenses.length === 0 ? (
+              <EmptyState
+                title="No expenses match"
+                hint="Try a different search term or clear the category filter."
+              />
             ) : (
-              <ul className="space-y-3">
-                {expenses.map((expense) => (
-                  <li key={expense.id}>
-                    <ExpenseItem
-                      expense={expense}
-                      canManage={expense.paidByUserId === currentUserId}
-                      onEdit={() => {
-                        setShowExpenseForm(false);
-                        setEditingExpense(expense);
-                      }}
-                      onDelete={() => handleDeleteExpense(expense)}
-                      deleting={deletingExpenseId === expense.id}
-                    />
-                  </li>
-                ))}
-              </ul>
+              <>
+                <ul className="space-y-3">
+                  {filteredExpenses!.slice(0, visibleExpenseCount).map((expense) => (
+                    <li key={expense.id}>
+                      <ExpenseItem
+                        expense={expense}
+                        canManage={expense.paidByUserId === currentUserId}
+                        onEdit={() => {
+                          setShowExpenseForm(false);
+                          setEditingExpense(expense);
+                        }}
+                        onDelete={() => handleDeleteExpense(expense)}
+                        deleting={deletingExpenseId === expense.id}
+                      />
+                    </li>
+                  ))}
+                </ul>
+                {filteredExpenses!.length > visibleExpenseCount && (
+                  <div className="mt-4 flex justify-center">
+                    <button
+                      type="button"
+                      onClick={() => setVisibleExpenseCount((c) => c + 10)}
+                      className="rounded-sm border border-line px-4 py-2 font-mono text-xs font-bold uppercase tracking-wider text-ink/70 transition-colors hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ledger-green"
+                    >
+                      Show more ({filteredExpenses!.length - visibleExpenseCount} more)
+                    </button>
+                  </div>
+                )}
+              </>
             )}
           </div>
         )}
@@ -680,6 +753,17 @@ export default function GroupDetailPage() {
         )}
 
         {tab === "activity" && <ActivityFeed items={activity} />}
+
+        <ConfirmDialog
+          open={showDeleteGroupDialog}
+          title={`Delete "${group.name}"?`}
+          description="This permanently removes all its expenses, settlements, and history for everyone in the group. This can't be undone."
+          confirmationPhrase={group.name}
+          confirmLabel="Delete group"
+          confirming={deletingGroup}
+          onConfirm={handleConfirmDeleteGroup}
+          onCancel={() => setShowDeleteGroupDialog(false)}
+        />
     </PageShell>
   );
 }

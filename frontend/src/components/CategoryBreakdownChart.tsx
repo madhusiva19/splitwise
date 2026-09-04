@@ -3,11 +3,13 @@
 import { Bar, BarChart, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import Card from "@/components/Card";
 import { Skeleton } from "@/components/Skeleton";
-import { CategoryBreakdown, formatCategory } from "@/lib/expenses";
+import { CategoryBreakdown, ExpenseCategory, formatCategory } from "@/lib/expenses";
 import { useTheme } from "@/lib/useTheme";
 
 interface CategoryBreakdownChartProps {
   breakdown: CategoryBreakdown[] | null;
+  activeCategory?: ExpenseCategory | null;
+  onCategoryClick?: (category: ExpenseCategory) => void;
 }
 
 // Shades and tints of the ledger palette (ledger.green / debt) so the chart reads as part
@@ -23,7 +25,7 @@ const CHART_THEME = {
   dark: { axisLine: "#3A362E", tick: "#EDE8DC", tooltipBg: "#1A1815", tooltipBorder: "#3A362E" },
 };
 
-export default function CategoryBreakdownChart({ breakdown }: CategoryBreakdownChartProps) {
+export default function CategoryBreakdownChart({ breakdown, activeCategory, onCategoryClick }: CategoryBreakdownChartProps) {
   const { theme } = useTheme();
   const colors = CATEGORY_COLORS[theme];
   const chartTheme = CHART_THEME[theme];
@@ -51,11 +53,16 @@ export default function CategoryBreakdownChart({ breakdown }: CategoryBreakdownC
     .sort((a, b) => b.totalAmount - a.totalAmount)
     .map((b) => ({ ...b, label: formatCategory(b.category) }));
 
+  const clickable = !!onCategoryClick;
+
   return (
     <Card className="mb-6">
-      <h2 className="mb-4 font-mono text-sm font-bold uppercase tracking-wider text-ink">
-        Spending by category
-      </h2>
+      <div className="mb-4 flex items-center justify-between gap-2">
+        <h2 className="font-mono text-sm font-bold uppercase tracking-wider text-ink">
+          Spending by category
+        </h2>
+        {clickable && <span className="font-mono text-[10px] uppercase tracking-wider text-ink/40">Click a bar to filter</span>}
+      </div>
       <div style={{ width: "100%", height: Math.max(data.length * 40, 120) }}>
         <ResponsiveContainer>
           <BarChart data={data} layout="vertical" margin={{ top: 0, right: 24, bottom: 0, left: 0 }}>
@@ -84,10 +91,23 @@ export default function CategoryBreakdownChart({ breakdown }: CategoryBreakdownC
                 return [`₹${amount.toFixed(2)} · ${count} expense${count === 1 ? "" : "s"}`, item.payload.label];
               }}
             />
-            <Bar dataKey="totalAmount" radius={[0, 2, 2, 0]} barSize={18}>
-              {data.map((entry, index) => (
-                <Cell key={entry.category} fill={colors[index % colors.length]} />
-              ))}
+            <Bar
+              dataKey="totalAmount"
+              radius={[0, 2, 2, 0]}
+              barSize={18}
+              onClick={(entry: unknown) => onCategoryClick?.((entry as { category: ExpenseCategory }).category)}
+              style={{ cursor: clickable ? "pointer" : "default" }}
+            >
+              {data.map((entry, index) => {
+                const isDimmed = !!activeCategory && activeCategory !== entry.category;
+                return (
+                  <Cell
+                    key={entry.category}
+                    fill={colors[index % colors.length]}
+                    opacity={isDimmed ? 0.35 : 1}
+                  />
+                );
+              })}
             </Bar>
           </BarChart>
         </ResponsiveContainer>
