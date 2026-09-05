@@ -72,6 +72,14 @@ public class ExpenseController {
         return ResponseEntity.ok(expenseService.listSettlements(groupId, currentUser.getUserId()));
     }
 
+    @PostMapping("/settlements/remind")
+    public ResponseEntity<Void> remindSettlement(@AuthenticationPrincipal AppUserDetails currentUser,
+                                                   @PathVariable String groupId,
+                                                   @Valid @RequestBody RemindSettlementRequest request) {
+        expenseService.sendSettlementReminder(groupId, currentUser.getUserId(), request);
+        return ResponseEntity.noContent().build();
+    }
+
     @GetMapping("/categories/breakdown")
     public ResponseEntity<List<CategoryBreakdown>> getCategoryBreakdown(@AuthenticationPrincipal AppUserDetails currentUser,
                                                                           @PathVariable String groupId) {

@@ -36,6 +36,7 @@ export default function AddExpenseForm({ groupId, members, expense, onSaved, onC
   const [amount, setAmount] = useState(expense ? String(expense.amount) : "");
   const [splitType, setSplitType] = useState<SplitType>(expense?.splitType ?? "EQUAL");
   const [category, setCategory] = useState<ExpenseCategory | undefined>(expense?.category);
+  const [paidByUserId, setPaidByUserId] = useState<string>(expense?.paidByUserId ?? "");
   const [participantIds, setParticipantIds] = useState<string[]>(
     expense ? expense.shares.map((s) => s.userId) : members.map((m) => m.userId)
   );
@@ -104,7 +105,10 @@ export default function AddExpenseForm({ groupId, members, expense, onSaved, onC
           : undefined,
       };
       const saved = isEditing
-        ? await updateExpense(groupId, expense!.id, req)
+        ? await updateExpense(groupId, expense!.id, {
+            ...req,
+            paidByUserId: paidByUserId !== expense!.paidByUserId ? paidByUserId : undefined,
+          })
         : await createExpense(groupId, req);
       onSaved(saved);
     } catch (err) {
@@ -140,6 +144,34 @@ export default function AddExpenseForm({ groupId, members, expense, onSaved, onC
           />
         </div>
       </div>
+
+      {isEditing && (
+        <div>
+          <span className="mb-2 block font-mono text-xs uppercase tracking-wider text-ink/70">
+            Paid by
+          </span>
+          <div className="flex flex-wrap gap-2">
+            {members.map((member) => {
+              const selected = paidByUserId === member.userId;
+              return (
+                <button
+                  key={member.userId}
+                  type="button"
+                  onClick={() => setPaidByUserId(member.userId)}
+                  aria-pressed={selected}
+                  className={`rounded-full border px-3 py-1 font-mono text-xs transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ledger-green ${
+                    selected
+                      ? "border-ledger-green bg-ledger-green text-paper"
+                      : "border-line text-ink/60 hover:text-ink"
+                  }`}
+                >
+                  {member.name}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       <SegmentedControl
         label="Split type"

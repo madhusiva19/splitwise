@@ -142,6 +142,14 @@ public class ExpenseService {
         expense.setSplitType(req.splitType());
         expense.setCategory(req.category() != null ? req.category() : ExpenseCategory.OTHER);
 
+        if (req.paidByUserId() != null) {
+            User newPayer = memberUsersById.get(req.paidByUserId());
+            if (newPayer == null) {
+                throw new BadRequestException("User " + req.paidByUserId() + " is not a member of this group");
+            }
+            expense.setPaidBy(newPayer);
+        }
+
         List<ExpenseShare> newShares = switch (req.splitType()) {
             case EQUAL -> buildEqualShares(expense, req.amount(), req.participantUserIds(), memberUsersById);
             case EXACT -> buildExactShares(expense, req.amount(), req.shares(), memberUsersById);
@@ -276,6 +284,28 @@ public class ExpenseService {
         }
 
         return toSettlementResponse(settlement);
+    }
+
+    // Lets the creditor nudge the debtor from the Settle Up tab — recordSettlement can only be
+    // called by the person paying, so without this the person owed money had no action available.
+    @Transactional
+    public void sendSettlementReminder(String groupId, String requesterUserId, RemindSettlementRequest req) {
+        groupRepository.findById(groupId)
+                .orElseThrow(() -> new ResourceNotFoundException("Group not found"));
+        List<GroupMember> members = groupMemberRepository.findByGroupId(groupId);
+        requireMembership(members, requesterUserId);
+        requireMembership(members, req.toUserId());
+
+        if (requesterUserId.equals(req.toUserId())) {
+            throw new BadRequestException("You can't remind yourself");
+        }
+
+        Map<String, User> memberUsersById = members.stream()
+                .collect(Collectors.toMap(m -> m.getUser().getId(), GroupMember::getUser));
+        String requesterName = memberUsersById.get(requesterUserId).getName();
+
+        notificationService.notify(req.toUserId(), NotificationType.PAYMENT_REMINDER,
+                requesterName + " reminded you to pay them ₹" + req.amount(), groupId);
     }
 
     @Transactional(readOnly = true)

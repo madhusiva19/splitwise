@@ -33,7 +33,9 @@ public class ExpenseDtos {
             @NotNull SplitType splitType,
             ExpenseCategory category,
             @NotEmpty List<String> participantUserIds,
-            List<ExpenseShareInput> shares
+            List<ExpenseShareInput> shares,
+            // Optional — omit to keep the existing payer, or set to reassign who paid.
+            String paidByUserId
     ) {}
 
     public record ExpenseShareResponse(
@@ -71,6 +73,11 @@ public class ExpenseDtos {
     ) {}
 
     public record RecordSettlementRequest(
+            @NotBlank String toUserId,
+            @NotNull @Positive BigDecimal amount
+    ) {}
+
+    public record RemindSettlementRequest(
             @NotBlank String toUserId,
             @NotNull @Positive BigDecimal amount
     ) {}

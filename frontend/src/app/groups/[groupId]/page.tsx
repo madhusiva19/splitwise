@@ -16,7 +16,7 @@ import AddRecurringExpenseForm from "@/components/AddRecurringExpenseForm";
 import RecurringExpensesList from "@/components/RecurringExpensesList";
 import ActivityFeed from "@/components/ActivityFeed";
 import ConfirmDialog from "@/components/ConfirmDialog";
-import { getGroup, deleteGroup, GroupResponse } from "@/lib/groups";
+import { getGroup, deleteGroup, leaveGroup, GroupResponse } from "@/lib/groups";
 import { downloadCsv } from "@/lib/csv";
 import {
   listExpenses,
@@ -24,6 +24,7 @@ import {
   getSettlementSuggestions,
   getCategoryBreakdown,
   recordSettlement,
+  remindSettlement,
   deleteExpense,
   formatCategory,
   ExpenseResponse,
@@ -142,6 +143,9 @@ export default function GroupDetailPage() {
   const [deletingGroup, setDeletingGroup] = useState(false);
   const [deleteGroupError, setDeleteGroupError] = useState<string | null>(null);
   const [showDeleteGroupDialog, setShowDeleteGroupDialog] = useState(false);
+  const [leavingGroup, setLeavingGroup] = useState(false);
+  const [leaveGroupError, setLeaveGroupError] = useState<string | null>(null);
+  const [showLeaveGroupDialog, setShowLeaveGroupDialog] = useState(false);
 
   const [showExpenseForm, setShowExpenseForm] = useState(false);
   const [editingExpense, setEditingExpense] = useState<ExpenseResponse | null>(null);
@@ -155,6 +159,8 @@ export default function GroupDetailPage() {
 
   const [settlingKey, setSettlingKey] = useState<string | null>(null);
   const [settleError, setSettleError] = useState<string | null>(null);
+  const [remindingKey, setRemindingKey] = useState<string | null>(null);
+  const [remindedKeys, setRemindedKeys] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     const accessToken = localStorage.getItem("accessToken");
@@ -261,6 +267,21 @@ export default function GroupDetailPage() {
     }
   }
 
+  async function handleSendReminder(suggestion: SettlementSuggestion) {
+    const key = `${suggestion.fromUserId}-${suggestion.toUserId}`;
+    setSettleError(null);
+    setRemindingKey(key);
+
+    try {
+      await remindSettlement(groupId, { toUserId: suggestion.fromUserId, amount: suggestion.amount });
+      setRemindedKeys((prev) => new Set(prev).add(key));
+    } catch (err) {
+      setSettleError(err instanceof Error ? err.message : "Failed to send reminder");
+    } finally {
+      setRemindingKey(null);
+    }
+  }
+
   async function handleConfirmDeleteGroup() {
     if (!group) return;
     setDeleteGroupError(null);
@@ -273,6 +294,20 @@ export default function GroupDetailPage() {
       setDeleteGroupError(err instanceof Error ? err.message : "Failed to delete group");
       setDeletingGroup(false);
       setShowDeleteGroupDialog(false);
+    }
+  }
+
+  async function handleConfirmLeaveGroup() {
+    setLeaveGroupError(null);
+    setLeavingGroup(true);
+
+    try {
+      await leaveGroup(groupId);
+      router.push("/");
+    } catch (err) {
+      setLeaveGroupError(err instanceof Error ? err.message : "Failed to leave group");
+      setLeavingGroup(false);
+      setShowLeaveGroupDialog(false);
     }
   }
 
@@ -358,7 +393,7 @@ export default function GroupDetailPage() {
         <header className="mb-6">
           <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1">
             <h1 className="break-words font-mono text-2xl font-bold text-ink sm:text-3xl">{group.name}</h1>
-            {group.createdByUserId === currentUserId && (
+            {group.createdByUserId === currentUserId ? (
               <button
                 type="button"
                 onClick={() => setShowDeleteGroupDialog(true)}
@@ -367,9 +402,19 @@ export default function GroupDetailPage() {
               >
                 {deletingGroup ? "Deleting…" : "Delete group"}
               </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setShowLeaveGroupDialog(true)}
+                disabled={leavingGroup}
+                className="whitespace-nowrap rounded-sm font-mono text-xs font-bold text-debt transition-colors hover:text-debt/80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-debt disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {leavingGroup ? "Leaving…" : "Leave group"}
+              </button>
             )}
           </div>
           {deleteGroupError && <ErrorBanner className="mt-2" message={deleteGroupError} />}
+          {leaveGroupError && <ErrorBanner className="mt-2" message={leaveGroupError} />}
           <div className="mt-3 flex flex-wrap items-center gap-2">
             {group.members.map((m) => (
               <span
@@ -675,6 +720,8 @@ export default function GroupDetailPage() {
                 {settlements.map((s, i) => {
                   const key = `${s.fromUserId}-${s.toUserId}`;
                   const canSettle = s.fromUserId === currentUserId;
+                  const canRemind = s.toUserId === currentUserId;
+                  const alreadyReminded = remindedKeys.has(key);
                   return (
                     <li key={`${key}-${i}`}>
                       <Card>
@@ -704,6 +751,16 @@ export default function GroupDetailPage() {
                               className="whitespace-nowrap rounded-sm font-mono text-xs font-bold text-ledger-green transition-colors hover:text-ledger-green-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ledger-green disabled:cursor-not-allowed disabled:opacity-60"
                             >
                               {settlingKey === key ? "Recording…" : "Mark as paid"}
+                            </button>
+                          )}
+                          {canRemind && (
+                            <button
+                              type="button"
+                              onClick={() => handleSendReminder(s)}
+                              disabled={remindingKey === key || alreadyReminded}
+                              className="whitespace-nowrap rounded-sm font-mono text-xs font-bold text-ink/60 transition-colors hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ledger-green disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                              {remindingKey === key ? "Sending…" : alreadyReminded ? "Reminded ✓" : "Send reminder"}
                             </button>
                           )}
                         </div>
@@ -760,9 +817,21 @@ export default function GroupDetailPage() {
           description="This permanently removes all its expenses, settlements, and history for everyone in the group. This can't be undone."
           confirmationPhrase={group.name}
           confirmLabel="Delete group"
+          confirmingLabel="Deleting…"
           confirming={deletingGroup}
           onConfirm={handleConfirmDeleteGroup}
           onCancel={() => setShowDeleteGroupDialog(false)}
+        />
+
+        <ConfirmDialog
+          open={showLeaveGroupDialog}
+          title={`Leave "${group.name}"?`}
+          description="You'll lose access to its expenses and history. You can only leave once you're fully settled up."
+          confirmLabel="Leave group"
+          confirmingLabel="Leaving…"
+          confirming={leavingGroup}
+          onConfirm={handleConfirmLeaveGroup}
+          onCancel={() => setShowLeaveGroupDialog(false)}
         />
     </PageShell>
   );

@@ -37,7 +37,10 @@ export interface CreateExpenseRequest {
   shares?: ExpenseShareInput[];
 }
 
-export type UpdateExpenseRequest = CreateExpenseRequest;
+export type UpdateExpenseRequest = CreateExpenseRequest & {
+  // Omit to keep the existing payer, or set to reassign who paid.
+  paidByUserId?: string;
+};
 
 export interface ExpenseShareResponse {
   userId: string;
@@ -74,6 +77,11 @@ export interface SettlementSuggestion {
 }
 
 export interface RecordSettlementRequest {
+  toUserId: string;
+  amount: number;
+}
+
+export interface RemindSettlementRequest {
   toUserId: string;
   amount: number;
 }
@@ -133,6 +141,13 @@ export function getSettlementSuggestions(groupId: string): Promise<SettlementSug
 
 export function recordSettlement(groupId: string, req: RecordSettlementRequest): Promise<SettlementResponse> {
   return apiFetch<SettlementResponse>(`/groups/${groupId}/settlements`, {
+    method: "POST",
+    body: JSON.stringify(req),
+  });
+}
+
+export function remindSettlement(groupId: string, req: RemindSettlementRequest): Promise<void> {
+  return apiFetch<void>(`/groups/${groupId}/settlements/remind`, {
     method: "POST",
     body: JSON.stringify(req),
   });

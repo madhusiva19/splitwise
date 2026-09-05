@@ -49,3 +49,9 @@ export function deleteGroup(groupId: string): Promise<void> {
     method: "DELETE",
   });
 }
+
+export function leaveGroup(groupId: string): Promise<void> {
+  return apiFetch<void>(`/groups/${groupId}/members/me`, {
+    method: "DELETE",
+  });
+}

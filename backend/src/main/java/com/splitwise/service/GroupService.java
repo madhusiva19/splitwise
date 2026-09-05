@@ -1,5 +1,6 @@
 package com.splitwise.service;
 
+import com.splitwise.dto.ExpenseDtos.BalanceResponse;
 import com.splitwise.dto.GroupDtos.*;
 import com.splitwise.entity.Group;
 import com.splitwise.entity.GroupMember;
@@ -21,6 +22,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 @Service
@@ -37,6 +39,7 @@ public class GroupService {
     private final SettlementRepository settlementRepository;
     private final RecurringExpenseTemplateRepository recurringExpenseTemplateRepository;
     private final NotificationRepository notificationRepository;
+    private final ExpenseService expenseService;
 
     @Transactional
     public GroupResponse createGroup(String creatorUserId, CreateGroupRequest req) {
@@ -140,6 +143,48 @@ public class GroupService {
         notificationRepository.deleteAll(notificationRepository.findByGroupId(groupId));
         groupMemberRepository.deleteAll(groupMemberRepository.findByGroupId(groupId));
         groupRepository.delete(group);
+    }
+
+    // A member leaves on their own; the creator must delete the group instead (there's no
+    // ownership-transfer flow), and nobody can leave while they still owe or are owed money —
+    // otherwise they could dodge a debt just by leaving.
+    @Transactional
+    public void leaveGroup(String groupId, String requesterUserId) {
+        Group group = groupRepository.findById(groupId)
+                .orElseThrow(() -> new ResourceNotFoundException("Group not found"));
+        List<GroupMember> members = groupMemberRepository.findByGroupId(groupId);
+        requireMembership(members, requesterUserId);
+
+        if (group.getCreatedBy().getId().equals(requesterUserId)) {
+            throw new BadRequestException("The group creator can't leave — delete the group instead");
+        }
+
+        List<BalanceResponse> balances = expenseService.getGroupBalances(groupId, requesterUserId);
+        BigDecimal myBalance = balances.stream()
+                .filter(b -> b.userId().equals(requesterUserId))
+                .map(BalanceResponse::netBalance)
+                .findFirst()
+                .orElse(BigDecimal.ZERO);
+        if (myBalance.abs().compareTo(new BigDecimal("0.01")) >= 0) {
+            throw new BadRequestException("You can't leave with an outstanding balance — settle up first");
+        }
+
+        GroupMember membership = members.stream()
+                .filter(m -> m.getUser().getId().equals(requesterUserId))
+                .findFirst()
+                .orElseThrow(() -> new ResourceNotFoundException("Membership not found"));
+        String leavingUserName = membership.getUser().getName();
+        groupMemberRepository.delete(membership);
+
+        for (GroupMember remaining : members) {
+            if (remaining.getUser().getId().equals(requesterUserId)) continue;
+            try {
+                notificationService.notify(remaining.getUser().getId(), NotificationType.MEMBER_LEFT,
+                        leavingUserName + " left " + group.getName(), groupId);
+            } catch (Exception e) {
+                log.warn("Failed to send MEMBER_LEFT notification for group {}", groupId, e);
+            }
+        }
     }
 
     // Membership is the gate for all group access — a non-member can't view or modify a group they don't belong to.

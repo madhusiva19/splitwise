@@ -4,7 +4,9 @@ export type NotificationType =
   | "ADDED_TO_GROUP"
   | "EXPENSE_ADDED"
   | "SETTLEMENT_RECORDED"
-  | "RECURRING_EXPENSE_CREATED";
+  | "RECURRING_EXPENSE_CREATED"
+  | "MEMBER_LEFT"
+  | "PAYMENT_REMINDER";
 
 export interface NotificationResponse {
   id: string;

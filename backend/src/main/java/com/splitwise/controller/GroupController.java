@@ -48,4 +48,11 @@ public class GroupController {
         groupService.deleteGroup(groupId, currentUser.getUserId());
         return ResponseEntity.noContent().build();
     }
+
+    @DeleteMapping("/{groupId}/members/me")
+    public ResponseEntity<Void> leaveGroup(@AuthenticationPrincipal AppUserDetails currentUser,
+                                            @PathVariable String groupId) {
+        groupService.leaveGroup(groupId, currentUser.getUserId());
+        return ResponseEntity.noContent().build();
+    }
 }
