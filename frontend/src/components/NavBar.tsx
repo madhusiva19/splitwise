@@ -10,6 +10,7 @@ import {
   getUnreadCount,
   markAsRead,
   markAllAsRead,
+  subscribeToNotifications,
   NotificationResponse,
 } from "@/lib/notifications";
 
@@ -34,12 +35,21 @@ export default function NavBar() {
 
   useEffect(() => {
     refreshUnreadCount();
-    const interval = setInterval(() => {
-      if (!open) refreshUnreadCount();
-    }, 30000);
-    return () => clearInterval(interval);
+
+    // Real-time updates via SSE; a slow fallback poll covers the rare case where the stream
+    // can't connect at all (e.g. a proxy that blocks streaming responses).
+    const unsubscribe = subscribeToNotifications((n) => {
+      if (!n.read) setUnreadCount((c) => c + 1);
+      setNotifications((prev) => (prev ? [n, ...prev] : prev));
+    });
+    const fallbackPoll = setInterval(refreshUnreadCount, 5 * 60 * 1000);
+
+    return () => {
+      unsubscribe();
+      clearInterval(fallbackPoll);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
+  }, []);
 
   useEffect(() => {
     if (!open) return;

@@ -4,9 +4,11 @@ import com.splitwise.dto.NotificationDtos.*;
 import com.splitwise.security.AppUserDetails;
 import com.splitwise.service.NotificationService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.List;
 
@@ -20,6 +22,14 @@ public class NotificationController {
     @GetMapping
     public ResponseEntity<List<NotificationResponse>> listMine(@AuthenticationPrincipal AppUserDetails currentUser) {
         return ResponseEntity.ok(notificationService.listForUser(currentUser.getUserId()));
+    }
+
+    // Native EventSource can't send an Authorization header, so the frontend connects with
+    // fetch + a manual stream reader instead — same Bearer-token auth as every other endpoint,
+    // no token-in-URL needed.
+    @GetMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public SseEmitter stream(@AuthenticationPrincipal AppUserDetails currentUser) {
+        return notificationService.subscribe(currentUser.getUserId());
     }
 
     @GetMapping("/unread-count")
