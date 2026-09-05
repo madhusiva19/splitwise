@@ -1,74 +1,67 @@
-# Splitwise-lite — Roadmap & Backlog
+# Splitwise — Roadmap & Backlog
 
-_Generated from a review of the current codebase (backend fully scaffolded, frontend auth-only)._
+_Updated 2026-09-05 from a fresh review of the codebase. Supersedes the previous
+version of this file, which described an auth-only frontend — that phase is done._
 
 ## Current State
 
-### Backend (Spring Boot) — solid foundation
+### Backend (Spring Boot) — feature-complete for core flows
 - **Auth**: signup, login, refresh, logout — JWT + refresh tokens, Spring Security
-- **Groups**: create group, list my groups, get group detail, add member
-- **Expenses**: create expense (EQUAL / EXACT / PERCENTAGE splits), list group expenses, get balances, settlement *suggestions* (debt-simplification)
-- **Data model**: User, Group, GroupMember, Expense, ExpenseShare (per-person share + settled flag), Settlement, RefreshToken
+- **Groups**: create, list, get detail, add member, remove member (leave), delete group
+- **Expenses**: create (EQUAL / EXACT / PERCENTAGE splits), list, **edit**, **delete**, category tagging
+- **Balances & settlements**: balances view, debt-simplification suggestions, **record a settlement** (`POST /settlements`), settlement history, **payment reminders** (`POST /settlements/remind`)
+- **Recurring expenses**: create/list/delete templates + a scheduler that generates expenses on cadence
+- **Notifications**: CRUD + unread count, triggers on expense added / added to group / settlement / reminder / member left
+- **Activity feed**: chronological log per group
+- **User search**: `/users/search` for member invites
+- **Category breakdown**: `/categories/breakdown` for spend-by-category
+- **Data model**: User, Group, GroupMember, Expense, ExpenseShare, ExpenseCategory, Settlement, Notification, RecurringExpenseTemplate, RefreshToken
 
-### Frontend (Next.js) — auth shell only
-- Login page, Signup page, generic `AuthCard` / `Field` components
-- Home page just shows "Welcome, {name}" — no groups, expenses, or balances UI yet
-- `apiFetch` helper wired up with JWT bearer token, tokens in `localStorage`
+### Frontend (Next.js) — full app, not just auth shell
+- Login / signup, groups dashboard (create + list), group detail page with 5 tabs: Expenses, Balances, Settle, Recurring, Activity
+- Add/edit expense form, add member form, recurring expense form, category breakdown chart (recharts)
+- Notification bell (polling-based) in `NavBar`, CSV export, dark mode toggle
+- Shared UI kit: `Card`, `PageShell`, `EmptyState`, `ErrorBanner`, `ConfirmDialog`, `Skeleton`, `SegmentedControl`, `Money`
+- "Paper/ink" mono design language applied consistently (`bg-paper`, `text-ink`, `font-mono`)
 
-### Known gaps (backend)
-- No endpoint to **record a settlement** (only `/settlements/suggestions` exists — nothing marks a debt as paid)
-- No expense **edit/delete**
-- No **notifications**
-- No user search/invite-by-email for adding group members — check `addMember`'s current contract
-- Tokens in `localStorage` — works, but worth knowing the XSS trade-off vs. httpOnly cookies
-
----
-
-## Frontend Build Order
-
-The frontend needs to be built almost from scratch past auth. Suggested sequence:
-
-1. **Groups dashboard** — list of groups (card grid), "create group" modal, empty state
-2. **Group detail page** — tabs/sections for Expenses / Balances / Members
-3. **Add expense form** — description, amount, split-type selector, per-member share inputs that adapt to split type, paid-by selector
-4. **Balances view** — "you owe X" / "X owes you" — good candidate for a simple visualization
-5. **Settlement suggestions view** — show simplified "who pays whom", with a "mark as settled" action (needs the new backend endpoint below)
-6. **Member management UI** — add member by email, member list with avatars/initials
-7. **Global layout** — persistent nav/sidebar, user menu, replace the placeholder home page
-8. **Loading / error / empty states** — none exist yet
-
-**Design note**: the home page already uses a "paper/ink" mono aesthetic (`bg-paper`, `text-ink`, `font-mono`). Worth deciding if that's the intentional design language and carrying it consistently instead of defaulting to generic Tailwind styling.
+### Known gaps
+- **No DB migrations** — `ddl-auto: update` in `application.yml`, no Flyway/Liquibase. Fine for solo dev, risky the moment schema changes hit a shared or prod database.
+- **Near-zero test coverage** — one backend test (`RecurringExpenseServiceTest`), no tests for `ExpenseService` (the split-calculation and balance-netting logic — the highest-risk code in the app), no frontend tests at all.
+- **Notifications are polled**, not pushed — `NavBar.tsx` uses `setInterval`; the original SSE design (`SseEmitter`, `GET /notifications/stream`) was scoped but never built.
+- **Hardcoded currency** — `Money.tsx` always renders `₹`; no per-group currency field.
+- **No receipt/image upload** on expenses.
+- **CORS hardcoded to `localhost:3000`** — not yet env-driven for deploy.
+- **Tokens in `localStorage`** — works, but still carries the XSS trade-off vs. httpOnly cookies (unresolved from the original design).
+- **No rate limiting** on auth or API endpoints.
+- `groups/[groupId]/page.tsx` is 838 lines doing all 5 tabs' state and handlers in one file — due for a split before more features land there.
 
 ---
 
-## Feature Backlog
+## Build Order
 
-### High priority (fills real gaps)
-- [ ] `POST /settlements` — actually record a settlement (currently only suggestions exist)
-- [ ] Edit / delete expense (`PUT` / `DELETE /expenses/{id}`)
-- [ ] Notification system — triggers: expense created, added to group, settlement recorded
-- [ ] Search/invite user to group by email (verify + improve `addMember` contract)
+One sequence, foundation first. Excludes receipt-OCR (a paid-tier feature in
+Splitwise proper, out of scope here). Each item assumes the ones above it are done.
 
-### Medium priority
-- [ ] Expense categories/tags (food, travel, rent) — enables filtering and breakdowns
-- [ ] Group activity feed — chronological log of expenses/settlements/joins
-- [ ] Multi-currency support (currency field per group)
-- [ ] Recurring expenses (e.g. monthly rent split)
-
-### Nice-to-have / stretch
-- [ ] Expense receipts — image upload attached to an expense
-- [ ] Export group summary (PDF/CSV of balances)
-- [ ] Dark mode toggle
+1. [ ] **Flyway (or Liquibase) migrations** — turn off `ddl-auto: update`. Do this before anything else touches the schema.
+2. [ ] **Unit tests for `ExpenseService`** — EQUAL/EXACT/PERCENTAGE split math, remainder distribution, balance netting. Highest-risk untested code in the app.
+3. [ ] **Split `groups/[groupId]/page.tsx`** into per-tab components — 838 lines of shared state/handlers; do this before more features land on that page.
+4. [ ] **Env-driven CORS + rate limiting on `/auth/**`** — currently hardcoded to `localhost:3000`, no throttling on login/signup.
+5. [ ] **Real-time notifications via SSE** (`GET /notifications/stream`) — replaces the `setInterval` poll in `NavBar.tsx`. All triggers already exist; this is wiring only, and unlocks live balance/expense updates across viewers for free.
+6. [ ] **Settle-up digest nudges** — layer onto the existing reminder endpoint: "you owe ₹X, last activity 3 days ago."
+7. [ ] **Multi-currency support** — currency field per group, stop hardcoding ₹ in `Money.tsx`.
+8. [ ] **Itemized expense entry** — enter a receipt's line items manually, let each member tick what they had, auto-compute exact shares. Stands alone without OCR.
+9. [ ] **Expense receipts** — image upload/attachment on an expense (storage + display only, no parsing).
+10. [ ] **Spending trend insights** — "you spent 40% more on food this month," extending the category breakdown chart already in place.
+11. [ ] **Export group summary as PDF** (CSV export already exists).
+12. [ ] **Re-evaluate token storage** — httpOnly cookies vs. `localStorage`, once this goes beyond solo/local use.
+13. [ ] **Live FX conversion** — builds on #7: convert balances across a group's mixed-currency expenses for trips abroad.
 
 ---
 
-## Notification System — Design Notes
+## Notification System — Design Notes (still applies, not yet built)
 
-Fits naturally given the expense/settlement flow already modeled. Recommended approach: **Server-Sent Events (SSE)** over WebSockets — notifications are one-directional (server → client), so SSE gives the real-time behavior without bidirectional connection complexity. Spring supports this natively via `SseEmitter`.
+REST CRUD is done; only the push layer is missing. Recommended approach: **Server-Sent Events (SSE)** over WebSockets — notifications are one-directional (server → client), so SSE gives real-time behavior without bidirectional connection complexity. Spring supports this natively via `SseEmitter`.
 
-**Scope for v1:**
-1. `notifications` table: `id`, `user_id`, `message`, `type`, `read` (bool), `created_at`
-2. REST endpoints: `GET /notifications`, `PATCH /notifications/{id}/read`
-3. `GET /notifications/stream` — SSE endpoint, authenticated via JWT at handshake
-4. Trigger creation on: expense added to a group, user added to a group, settlement recorded
-5. Frontend: SSE client + bell icon with unread count + toast on new notification
+**Remaining scope:**
+1. `GET /notifications/stream` — SSE endpoint, authenticated via JWT at handshake
+2. Frontend: SSE client replacing the `setInterval` poll in `NavBar.tsx`; keep the bell/unread-count UI as-is
