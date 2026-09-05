@@ -4,7 +4,9 @@ import { useMemo, useState, FormEvent } from "react";
 import Field from "@/components/Field";
 import ErrorBanner from "@/components/ErrorBanner";
 import SegmentedControl from "@/components/SegmentedControl";
+import ItemizedExpenseEntry from "@/components/ItemizedExpenseEntry";
 import { useCurrency } from "@/lib/currency";
+import { ItemizedResult } from "@/lib/itemizedSplit";
 import {
   createExpense,
   updateExpense,
@@ -17,10 +19,15 @@ import {
 } from "@/lib/expenses";
 import { GroupMember } from "@/lib/groups";
 
-const SPLIT_TYPE_OPTIONS: { value: SplitType; label: string }[] = [
+// "Itemized" isn't a real backend SplitType — it's a frontend entry method that computes an
+// EXACT split from line items, then submits it the same way a manually-entered EXACT split would.
+type EntryMode = SplitType | "ITEMIZED";
+
+const ENTRY_MODE_OPTIONS: { value: EntryMode; label: string }[] = [
   { value: "EQUAL", label: "Equal" },
   { value: "EXACT", label: "Exact" },
   { value: "PERCENTAGE", label: "Percent" },
+  { value: "ITEMIZED", label: "Itemized" },
 ];
 
 interface AddExpenseFormProps {
@@ -36,7 +43,8 @@ export default function AddExpenseForm({ groupId, members, expense, onSaved, onC
   const isEditing = !!expense;
   const [description, setDescription] = useState(expense?.description ?? "");
   const [amount, setAmount] = useState(expense ? String(expense.amount) : "");
-  const [splitType, setSplitType] = useState<SplitType>(expense?.splitType ?? "EQUAL");
+  const [mode, setMode] = useState<EntryMode>(expense?.splitType ?? "EQUAL");
+  const [itemizedResult, setItemizedResult] = useState<ItemizedResult | null>(null);
   const [category, setCategory] = useState<ExpenseCategory | undefined>(expense?.category);
   const [paidByUserId, setPaidByUserId] = useState<string>(expense?.paidByUserId ?? "");
   const [participantIds, setParticipantIds] = useState<string[]>(
@@ -47,7 +55,7 @@ export default function AddExpenseForm({ groupId, members, expense, onSaved, onC
       ? Object.fromEntries(
           expense.shares.map((s) => [
             s.userId,
-            splitType === "PERCENTAGE"
+            mode === "PERCENTAGE"
               ? String((s.shareAmount / expense.amount) * 100)
               : String(s.shareAmount),
           ])
@@ -59,12 +67,14 @@ export default function AddExpenseForm({ groupId, members, expense, onSaved, onC
   const [descriptionTouched, setDescriptionTouched] = useState(false);
   const [amountTouched, setAmountTouched] = useState(false);
 
-  const parsedAmount = parseFloat(amount);
-  const needsShares = splitType === "EXACT" || splitType === "PERCENTAGE";
+  const isItemized = mode === "ITEMIZED";
+  const splitType: SplitType = isItemized ? "EXACT" : mode;
+  const parsedAmount = isItemized ? itemizedResult?.amount ?? NaN : parseFloat(amount);
+  const needsShares = mode === "EXACT" || mode === "PERCENTAGE";
   const descriptionError =
     descriptionTouched && description.trim().length === 0 ? "Description is required" : undefined;
   const amountError =
-    amountTouched && !(Number.isFinite(parsedAmount) && parsedAmount > 0)
+    !isItemized && amountTouched && !(Number.isFinite(parsedAmount) && parsedAmount > 0)
       ? "Enter an amount greater than 0"
       : undefined;
 
@@ -86,7 +96,7 @@ export default function AddExpenseForm({ groupId, members, expense, onSaved, onC
     description.trim().length > 0 &&
     Number.isFinite(parsedAmount) &&
     parsedAmount > 0 &&
-    participantIds.length > 0 &&
+    (isItemized || participantIds.length > 0) &&
     sharesValid;
 
   async function handleSubmit(e: FormEvent) {
@@ -101,8 +111,10 @@ export default function AddExpenseForm({ groupId, members, expense, onSaved, onC
         amount: parsedAmount,
         splitType,
         category,
-        participantUserIds: participantIds,
-        shares: needsShares
+        participantUserIds: isItemized ? itemizedResult!.shares.map((s) => s.userId) : participantIds,
+        shares: isItemized
+          ? itemizedResult!.shares
+          : needsShares
           ? participantIds.map((id) => ({ userId: id, amount: parseFloat(shareInputs[id]) || 0 }))
           : undefined,
       };
@@ -134,16 +146,25 @@ export default function AddExpenseForm({ groupId, members, expense, onSaved, onC
           required
         />
         <div className="sm:w-32">
-          <Field
-            label="Amount"
-            type="number"
-            value={amount}
-            onChange={setAmount}
-            onBlur={() => setAmountTouched(true)}
-            error={amountError}
-            placeholder="0.00"
-            required
-          />
+          {isItemized ? (
+            <div>
+              <span className="block font-mono text-xs uppercase tracking-wider text-ink/70">Amount</span>
+              <p className="mt-1 py-1.5 font-mono text-ink">
+                {itemizedResult ? `${symbol}${itemizedResult.amount.toFixed(2)}` : "—"}
+              </p>
+            </div>
+          ) : (
+            <Field
+              label="Amount"
+              type="number"
+              value={amount}
+              onChange={setAmount}
+              onBlur={() => setAmountTouched(true)}
+              error={amountError}
+              placeholder="0.00"
+              required
+            />
+          )}
         </div>
       </div>
 
@@ -177,9 +198,9 @@ export default function AddExpenseForm({ groupId, members, expense, onSaved, onC
 
       <SegmentedControl
         label="Split type"
-        options={SPLIT_TYPE_OPTIONS}
-        value={splitType}
-        onChange={setSplitType}
+        options={ENTRY_MODE_OPTIONS}
+        value={mode}
+        onChange={setMode}
       />
 
       <div>
@@ -208,6 +229,9 @@ export default function AddExpenseForm({ groupId, members, expense, onSaved, onC
         </div>
       </div>
 
+      {isItemized ? (
+        <ItemizedExpenseEntry members={members} onChange={setItemizedResult} />
+      ) : (
       <div className="rounded-sm border border-line px-4 py-3">
         <span className="mb-2 block font-mono text-xs uppercase tracking-wider text-ink/70">
           Participants
@@ -257,6 +281,7 @@ export default function AddExpenseForm({ groupId, members, expense, onSaved, onC
           </p>
         )}
       </div>
+      )}
 
       {error && <ErrorBanner message={error} />}
 
