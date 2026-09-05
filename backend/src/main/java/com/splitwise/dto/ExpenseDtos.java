@@ -55,6 +55,7 @@ public class ExpenseDtos {
             String paidByUserId,
             String paidByName,
             Instant createdAt,
+            boolean hasReceipt,
             List<ExpenseShareResponse> shares
     ) {}
 

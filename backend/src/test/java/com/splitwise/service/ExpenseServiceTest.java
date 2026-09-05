@@ -16,6 +16,7 @@ import com.splitwise.entity.SplitType;
 import com.splitwise.entity.User;
 import com.splitwise.exception.BadRequestException;
 import com.splitwise.exception.ForbiddenException;
+import com.splitwise.repository.ExpenseReceiptRepository;
 import com.splitwise.repository.ExpenseRepository;
 import com.splitwise.repository.ExpenseShareRepository;
 import com.splitwise.repository.GroupMemberRepository;
@@ -55,6 +56,7 @@ class ExpenseServiceTest {
     @Mock private UserRepository userRepository;
     @Mock private SettlementRepository settlementRepository;
     @Mock private NotificationService notificationService;
+    @Mock private ExpenseReceiptRepository expenseReceiptRepository;
 
     @InjectMocks
     private ExpenseService expenseService;
@@ -242,6 +244,49 @@ class ExpenseServiceTest {
 
         assertThatThrownBy(() -> expenseService.deleteExpense(GROUP_ID, "exp-1", "bob"))
                 .isInstanceOf(ForbiddenException.class);
+    }
+
+    @Test
+    void deleteExpense_alsoDeletesAnyAttachedReceipt() {
+        Expense existing = Expense.builder()
+                .id("exp-1").group(group).paidBy(alice).description("Dinner")
+                .amount(new BigDecimal("30.00")).splitType(SplitType.EQUAL)
+                .category(ExpenseCategory.FOOD)
+                .build();
+        when(expenseRepository.findById("exp-1")).thenReturn(java.util.Optional.of(existing));
+        com.splitwise.entity.ExpenseReceipt receipt = com.splitwise.entity.ExpenseReceipt.builder()
+                .id("receipt-1").expense(existing).contentType("image/png").fileName("r.png")
+                .data(new byte[]{1, 2, 3}).build();
+        when(expenseReceiptRepository.findByExpenseId("exp-1")).thenReturn(java.util.Optional.of(receipt));
+
+        expenseService.deleteExpense(GROUP_ID, "exp-1", "alice");
+
+        org.mockito.Mockito.verify(expenseReceiptRepository).delete(receipt);
+        org.mockito.Mockito.verify(expenseRepository).delete(existing);
+    }
+
+    // ---- Receipt flag on list ----
+
+    @Test
+    void listGroupExpenses_flagsWhichExpensesHaveReceipts() {
+        Expense withReceipt = Expense.builder()
+                .id("exp-1").group(group).paidBy(alice).description("Has receipt")
+                .amount(new BigDecimal("10.00")).splitType(SplitType.EQUAL).category(ExpenseCategory.FOOD)
+                .createdAt(java.time.Instant.now()).build();
+        Expense withoutReceipt = Expense.builder()
+                .id("exp-2").group(group).paidBy(alice).description("No receipt")
+                .amount(new BigDecimal("20.00")).splitType(SplitType.EQUAL).category(ExpenseCategory.FOOD)
+                .createdAt(java.time.Instant.now()).build();
+        when(expenseRepository.findByGroupId(GROUP_ID)).thenReturn(List.of(withReceipt, withoutReceipt));
+        when(expenseReceiptRepository.findExpenseIdsWithReceipt(any()))
+                .thenReturn(java.util.Set.of("exp-1"));
+
+        List<ExpenseResponse> responses = expenseService.listGroupExpenses(GROUP_ID, "alice");
+
+        assertThat(responses).extracting(ExpenseResponse::id, ExpenseResponse::hasReceipt)
+                .containsExactlyInAnyOrder(
+                        org.assertj.core.groups.Tuple.tuple("exp-1", true),
+                        org.assertj.core.groups.Tuple.tuple("exp-2", false));
     }
 
     // ---- Balance netting ----

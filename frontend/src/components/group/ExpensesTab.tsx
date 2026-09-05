@@ -195,6 +195,7 @@ export default function ExpensesTab({
             {filteredExpenses!.slice(0, visibleExpenseCount).map((expense) => (
               <li key={expense.id}>
                 <ExpenseItem
+                  groupId={groupId}
                   expense={expense}
                   canManage={expense.paidByUserId === currentUserId}
                   onEdit={() => {
@@ -203,6 +204,11 @@ export default function ExpensesTab({
                   }}
                   onDelete={() => handleDeleteExpense(expense)}
                   deleting={deletingExpenseId === expense.id}
+                  onReceiptChanged={(hasReceipt) =>
+                    onExpensesChanged(
+                      (expenses ?? []).map((e) => (e.id === expense.id ? { ...e, hasReceipt } : e))
+                    )
+                  }
                 />
               </li>
             ))}

@@ -3,6 +3,7 @@ package com.splitwise.service;
 import com.splitwise.dto.ExpenseDtos.BalanceResponse;
 import com.splitwise.dto.GroupDtos.*;
 import com.splitwise.entity.Currency;
+import com.splitwise.entity.Expense;
 import com.splitwise.entity.Group;
 import com.splitwise.entity.GroupMember;
 import com.splitwise.entity.NotificationType;
@@ -10,6 +11,7 @@ import com.splitwise.entity.User;
 import com.splitwise.exception.BadRequestException;
 import com.splitwise.exception.ForbiddenException;
 import com.splitwise.exception.ResourceNotFoundException;
+import com.splitwise.repository.ExpenseReceiptRepository;
 import com.splitwise.repository.ExpenseRepository;
 import com.splitwise.repository.GroupMemberRepository;
 import com.splitwise.repository.GroupRepository;
@@ -41,6 +43,7 @@ public class GroupService {
     private final RecurringExpenseTemplateRepository recurringExpenseTemplateRepository;
     private final NotificationRepository notificationRepository;
     private final ExpenseService expenseService;
+    private final ExpenseReceiptRepository expenseReceiptRepository;
 
     @Transactional
     public GroupResponse createGroup(String creatorUserId, CreateGroupRequest req) {
@@ -141,8 +144,12 @@ public class GroupService {
             throw new ForbiddenException("Only the group creator can delete this group");
         }
 
+        List<Expense> groupExpenses = expenseRepository.findByGroupId(groupId);
+        expenseReceiptRepository.deleteAll(expenseReceiptRepository.findByExpenseIdIn(
+                groupExpenses.stream().map(Expense::getId).toList()));
+
         recurringExpenseTemplateRepository.deleteAll(recurringExpenseTemplateRepository.findByGroupId(groupId));
-        expenseRepository.deleteAll(expenseRepository.findByGroupId(groupId));
+        expenseRepository.deleteAll(groupExpenses);
         settlementRepository.deleteAll(settlementRepository.findByGroupId(groupId));
         notificationRepository.deleteAll(notificationRepository.findByGroupId(groupId));
         groupMemberRepository.deleteAll(groupMemberRepository.findByGroupId(groupId));

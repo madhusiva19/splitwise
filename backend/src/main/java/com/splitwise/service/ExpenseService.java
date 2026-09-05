@@ -12,6 +12,7 @@ import com.splitwise.entity.User;
 import com.splitwise.exception.BadRequestException;
 import com.splitwise.exception.ForbiddenException;
 import com.splitwise.exception.ResourceNotFoundException;
+import com.splitwise.repository.ExpenseReceiptRepository;
 import com.splitwise.repository.ExpenseRepository;
 import com.splitwise.repository.ExpenseShareRepository;
 import com.splitwise.repository.GroupMemberRepository;
@@ -31,6 +32,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.PriorityQueue;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -47,6 +49,7 @@ public class ExpenseService {
     private final UserRepository userRepository;
     private final SettlementRepository settlementRepository;
     private final NotificationService notificationService;
+    private final ExpenseReceiptRepository expenseReceiptRepository;
 
     @Transactional
     public ExpenseResponse createExpense(String groupId, String payerUserId, CreateExpenseRequest req) {
@@ -180,6 +183,8 @@ public class ExpenseService {
             throw new ForbiddenException("Only the person who paid can delete this expense");
         }
 
+        // No cascade declared — the FK from expense_receipts would otherwise block this delete.
+        expenseReceiptRepository.findByExpenseId(expenseId).ifPresent(expenseReceiptRepository::delete);
         expenseRepository.delete(expense);
     }
 
@@ -190,9 +195,13 @@ public class ExpenseService {
         List<GroupMember> members = groupMemberRepository.findByGroupId(groupId);
         requireMembership(members, requesterUserId);
 
-        return expenseRepository.findByGroupId(groupId).stream()
+        List<Expense> expenses = expenseRepository.findByGroupId(groupId);
+        Set<String> withReceipts = expenseReceiptRepository.findExpenseIdsWithReceipt(
+                expenses.stream().map(Expense::getId).toList());
+
+        return expenses.stream()
                 .sorted(Comparator.comparing(Expense::getCreatedAt).reversed())
-                .map(this::toExpenseResponse)
+                .map(e -> toExpenseResponse(e, withReceipts.contains(e.getId())))
                 .toList();
     }
 
@@ -465,6 +474,10 @@ public class ExpenseService {
     }
 
     private ExpenseResponse toExpenseResponse(Expense expense) {
+        return toExpenseResponse(expense, expenseReceiptRepository.existsByExpenseId(expense.getId()));
+    }
+
+    private ExpenseResponse toExpenseResponse(Expense expense, boolean hasReceipt) {
         List<ExpenseShareResponse> shareResponses = expense.getShares().stream()
                 .map(s -> new ExpenseShareResponse(s.getUser().getId(), s.getUser().getName(), s.getShareAmount(), s.isSettled()))
                 .toList();
@@ -479,6 +492,7 @@ public class ExpenseService {
                 expense.getPaidBy().getId(),
                 expense.getPaidBy().getName(),
                 expense.getCreatedAt(),
+                hasReceipt,
                 shareResponses
         );
     }

@@ -59,6 +59,7 @@ export interface ExpenseResponse {
   paidByUserId: string;
   paidByName: string;
   createdAt: string;
+  hasReceipt: boolean;
   shares: ExpenseShareResponse[];
 }
 

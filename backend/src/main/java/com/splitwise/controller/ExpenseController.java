@@ -2,12 +2,16 @@ package com.splitwise.controller;
 
 import com.splitwise.dto.ExpenseDtos.*;
 import com.splitwise.security.AppUserDetails;
+import com.splitwise.service.ExpenseReceiptService;
 import com.splitwise.service.ExpenseService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -17,6 +21,7 @@ import java.util.List;
 public class ExpenseController {
 
     private final ExpenseService expenseService;
+    private final ExpenseReceiptService expenseReceiptService;
 
     @PostMapping("/expenses")
     public ResponseEntity<ExpenseResponse> createExpense(@AuthenticationPrincipal AppUserDetails currentUser,
@@ -84,5 +89,33 @@ public class ExpenseController {
     public ResponseEntity<List<CategoryBreakdown>> getCategoryBreakdown(@AuthenticationPrincipal AppUserDetails currentUser,
                                                                           @PathVariable String groupId) {
         return ResponseEntity.ok(expenseService.getCategoryBreakdown(groupId, currentUser.getUserId()));
+    }
+
+    @PostMapping(value = "/expenses/{expenseId}/receipt", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<Void> uploadReceipt(@AuthenticationPrincipal AppUserDetails currentUser,
+                                               @PathVariable String groupId,
+                                               @PathVariable String expenseId,
+                                               @RequestParam("file") MultipartFile file) {
+        expenseReceiptService.uploadReceipt(groupId, expenseId, currentUser.getUserId(), file);
+        return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/expenses/{expenseId}/receipt")
+    public ResponseEntity<byte[]> getReceipt(@AuthenticationPrincipal AppUserDetails currentUser,
+                                              @PathVariable String groupId,
+                                              @PathVariable String expenseId) {
+        ExpenseReceiptService.ReceiptData receipt = expenseReceiptService.getReceipt(groupId, expenseId, currentUser.getUserId());
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(receipt.contentType()))
+                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + receipt.fileName() + "\"")
+                .body(receipt.data());
+    }
+
+    @DeleteMapping("/expenses/{expenseId}/receipt")
+    public ResponseEntity<Void> deleteReceipt(@AuthenticationPrincipal AppUserDetails currentUser,
+                                               @PathVariable String groupId,
+                                               @PathVariable String expenseId) {
+        expenseReceiptService.deleteReceipt(groupId, expenseId, currentUser.getUserId());
+        return ResponseEntity.noContent().build();
     }
 }
