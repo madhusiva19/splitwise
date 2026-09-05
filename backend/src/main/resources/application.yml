@@ -25,6 +25,16 @@ spring:
 server:
   port: 8080
 
+app:
+  cors:
+    # Comma-separated list of allowed origins. Override with CORS_ALLOWED_ORIGINS in any
+    # environment where the frontend isn't on localhost:3000 (e.g. a deployed frontend URL).
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000}
+  rate-limit:
+    auth:
+      max-requests: ${AUTH_RATE_LIMIT_MAX_REQUESTS:10}
+      window-seconds: ${AUTH_RATE_LIMIT_WINDOW_SECONDS:60}
+
 jwt:
   secret: ${JWT_SECRET:change-this-to-a-long-random-base64-string-before-deploying}
   access-token-expiration-ms: 900000
