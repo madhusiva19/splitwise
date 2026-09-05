@@ -21,6 +21,11 @@ public class Group {
     @Column(nullable = false, length = 100)
     private String name;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 10)
+    @Builder.Default
+    private Currency currency = Currency.INR;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "created_by", nullable = false)
     private User createdBy;

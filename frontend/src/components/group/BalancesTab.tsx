@@ -6,6 +6,7 @@ import Money from "@/components/Money";
 import EmptyState from "@/components/EmptyState";
 import { CardListSkeleton } from "@/components/Skeleton";
 import { downloadCsv } from "@/lib/csv";
+import { useCurrency } from "@/lib/currency";
 import { BalanceResponse } from "@/lib/expenses";
 
 interface BalancesTabProps {
@@ -15,6 +16,8 @@ interface BalancesTabProps {
 }
 
 export default function BalancesTab({ groupName, balances, currentUserId }: BalancesTabProps) {
+  const { code, symbol } = useCurrency();
+
   const balanceSummary = useMemo(() => {
     if (!balances) return null;
     const mine = balances.find((b) => b.userId === currentUserId);
@@ -32,15 +35,15 @@ export default function BalancesTab({ groupName, balances, currentUserId }: Bala
     const rows = balances.map((b) => {
       const status =
         b.netBalance > 0.004
-          ? `is owed ₹${b.netBalance.toFixed(2)}`
+          ? `is owed ${symbol}${b.netBalance.toFixed(2)}`
           : b.netBalance < -0.004
-          ? `owes ₹${Math.abs(b.netBalance).toFixed(2)}`
+          ? `owes ${symbol}${Math.abs(b.netBalance).toFixed(2)}`
           : "settled up";
       return [b.userName, b.netBalance.toFixed(2), status];
     });
 
     const safeName = groupName.trim().replace(/[^a-z0-9]+/gi, "-").replace(/^-+|-+$/g, "") || "group";
-    downloadCsv(`${safeName}-balances.csv`, ["Member", "Net balance (INR)", "Status"], rows);
+    downloadCsv(`${safeName}-balances.csv`, ["Member", `Net balance (${code})`, "Status"], rows);
   }
 
   return (
@@ -60,13 +63,13 @@ export default function BalancesTab({ groupName, balances, currentUserId }: Bala
                   <>
                     Overall, you&rsquo;re owed{" "}
                     <span className="font-mono font-bold text-ledger-green">
-                      ₹{balanceSummary.toFixed(2)}
+                      {symbol}{balanceSummary.toFixed(2)}
                     </span>
                   </>
                 ) : (
                   <>
                     Overall, you owe{" "}
-                    <span className="font-mono font-bold text-debt">₹{Math.abs(balanceSummary).toFixed(2)}</span>
+                    <span className="font-mono font-bold text-debt">{symbol}{Math.abs(balanceSummary).toFixed(2)}</span>
                   </>
                 )}
               </p>

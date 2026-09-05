@@ -4,6 +4,7 @@ import { useMemo, useState, FormEvent } from "react";
 import Field from "@/components/Field";
 import ErrorBanner from "@/components/ErrorBanner";
 import SegmentedControl from "@/components/SegmentedControl";
+import { useCurrency } from "@/lib/currency";
 import {
   createExpense,
   updateExpense,
@@ -31,6 +32,7 @@ interface AddExpenseFormProps {
 }
 
 export default function AddExpenseForm({ groupId, members, expense, onSaved, onCancel }: AddExpenseFormProps) {
+  const { symbol } = useCurrency();
   const isEditing = !!expense;
   const [description, setDescription] = useState(expense?.description ?? "");
   const [amount, setAmount] = useState(expense ? String(expense.amount) : "");
@@ -238,7 +240,7 @@ export default function AddExpenseForm({ groupId, members, expense, onSaved, onC
                 )}
                 {!needsShares && checked && Number.isFinite(parsedAmount) && parsedAmount > 0 && participantIds.length > 0 && (
                   <span className="font-mono text-xs tabular-nums text-ink/50">
-                    ₹{(parsedAmount / participantIds.length).toFixed(2)}
+                    {symbol}{(parsedAmount / participantIds.length).toFixed(2)}
                   </span>
                 )}
               </div>
@@ -249,7 +251,7 @@ export default function AddExpenseForm({ groupId, members, expense, onSaved, onC
           <p className={`mt-3 border-t border-line pt-2 font-mono text-xs ${sharesValid ? "text-ink/60" : "text-debt"}`}>
             {splitType === "PERCENTAGE"
               ? `Total: ${shareSum.toFixed(2)}% (must equal 100%)`
-              : `Total: ₹${shareSum.toFixed(2)} (must equal ₹${
+              : `Total: ${symbol}${shareSum.toFixed(2)} (must equal ${symbol}${
                   Number.isFinite(parsedAmount) ? parsedAmount.toFixed(2) : "0.00"
                 })`}
           </p>

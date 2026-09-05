@@ -13,6 +13,7 @@ import BalancesTab from "@/components/group/BalancesTab";
 import SettleTab from "@/components/group/SettleTab";
 import RecurringTab from "@/components/group/RecurringTab";
 import { getGroup, GroupResponse } from "@/lib/groups";
+import { CurrencyContext } from "@/lib/currency";
 import {
   listExpenses,
   getBalances,
@@ -134,6 +135,7 @@ export default function GroupDetailPage() {
   }
 
   return (
+    <CurrencyContext.Provider value={{ code: group.currency, symbol: group.currencySymbol }}>
     <PageShell>
       <Link
         href="/"
@@ -221,5 +223,6 @@ export default function GroupDetailPage() {
 
       {tab === "activity" && <ActivityFeed items={activity} />}
     </PageShell>
+    </CurrencyContext.Provider>
   );
 }

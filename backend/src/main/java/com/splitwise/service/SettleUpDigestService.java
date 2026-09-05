@@ -67,8 +67,8 @@ public class SettleUpDigestService {
                     balance.userId(), group.getId(), NotificationType.SETTLE_UP_NUDGE, lastActivity);
             if (alreadyNudged) continue;
 
-            String message = "You owe ₹" + balance.netBalance().abs() + " in " + group.getName()
-                    + " — last activity " + daysSinceActivity + "d ago";
+            String message = "You owe " + group.getCurrency().getSymbol() + balance.netBalance().abs()
+                    + " in " + group.getName() + " — last activity " + daysSinceActivity + "d ago";
             notificationService.notify(balance.userId(), NotificationType.SETTLE_UP_NUDGE, message, group.getId());
             nudged++;
         }

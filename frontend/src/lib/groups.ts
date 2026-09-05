@@ -12,6 +12,8 @@ export interface GroupResponse {
   createdByUserId: string;
   createdByName: string;
   createdAt: string;
+  currency: string;
+  currencySymbol: string;
   members: GroupMember[];
 }
 
@@ -20,12 +22,14 @@ export interface GroupSummaryResponse {
   name: string;
   memberCount: number;
   createdAt: string;
+  currency: string;
+  currencySymbol: string;
 }
 
-export function createGroup(name: string): Promise<GroupResponse> {
+export function createGroup(name: string, currency: string): Promise<GroupResponse> {
   return apiFetch<GroupResponse>("/groups", {
     method: "POST",
-    body: JSON.stringify({ name }),
+    body: JSON.stringify({ name, currency }),
   });
 }
 

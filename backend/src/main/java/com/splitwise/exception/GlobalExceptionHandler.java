@@ -2,6 +2,7 @@ package com.splitwise.exception;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -40,6 +41,13 @@ public class GlobalExceptionHandler {
                 .map(f -> f.getField() + ": " + f.getDefaultMessage())
                 .orElse("Validation failed");
         return build(HttpStatus.BAD_REQUEST, message);
+    }
+
+    // Covers malformed JSON and invalid enum values (e.g. an unsupported currency code) — those
+    // are client mistakes, not server failures, so they shouldn't surface as a 500.
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<Object> handleUnreadableMessage(HttpMessageNotReadableException ex) {
+        return build(HttpStatus.BAD_REQUEST, "Malformed request body");
     }
 
     @ExceptionHandler(Exception.class)

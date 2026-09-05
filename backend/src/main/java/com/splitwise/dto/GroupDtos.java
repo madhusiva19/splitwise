@@ -1,5 +1,6 @@
 package com.splitwise.dto;
 
+import com.splitwise.entity.Currency;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 
@@ -9,7 +10,10 @@ import java.util.List;
 public class GroupDtos {
 
     public record CreateGroupRequest(
-            @NotBlank String name
+            @NotBlank String name,
+            // Optional — defaults to INR. Fixed at creation; there's no currency-change endpoint,
+            // since existing expenses would already be in the original currency.
+            Currency currency
     ) {}
 
     public record AddMemberRequest(
@@ -28,6 +32,8 @@ public class GroupDtos {
             String createdByUserId,
             String createdByName,
             Instant createdAt,
+            Currency currency,
+            String currencySymbol,
             List<MemberResponse> members
     ) {}
 
@@ -35,6 +41,8 @@ public class GroupDtos {
             String id,
             String name,
             int memberCount,
-            Instant createdAt
+            Instant createdAt,
+            Currency currency,
+            String currencySymbol
     ) {}
 }

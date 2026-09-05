@@ -129,7 +129,8 @@ public class RecurringExpenseService {
                 for (String participantId : template.getParticipantUserIds()) {
                     if (!participantId.equals(paidByUserId)) {
                         notificationService.notify(participantId, NotificationType.RECURRING_EXPENSE_CREATED,
-                                "Recurring expense auto-added: " + template.getDescription() + " (₹" + template.getAmount() + ")",
+                                "Recurring expense auto-added: " + template.getDescription() + " ("
+                                        + template.getGroup().getCurrency().getSymbol() + template.getAmount() + ")",
                                 template.getGroup().getId());
                     }
                 }

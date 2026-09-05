@@ -3,6 +3,7 @@
 import { Bar, BarChart, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import Card from "@/components/Card";
 import { Skeleton } from "@/components/Skeleton";
+import { useCurrency } from "@/lib/currency";
 import { CategoryBreakdown, ExpenseCategory, formatCategory } from "@/lib/expenses";
 import { useTheme } from "@/lib/useTheme";
 
@@ -27,6 +28,7 @@ const CHART_THEME = {
 
 export default function CategoryBreakdownChart({ breakdown, activeCategory, onCategoryClick }: CategoryBreakdownChartProps) {
   const { theme } = useTheme();
+  const { symbol } = useCurrency();
   const colors = CATEGORY_COLORS[theme];
   const chartTheme = CHART_THEME[theme];
 
@@ -88,7 +90,7 @@ export default function CategoryBreakdownChart({ breakdown, activeCategory, onCa
               formatter={(value, _name, item) => {
                 const amount = Number(value ?? 0);
                 const count = item.payload.expenseCount as number;
-                return [`₹${amount.toFixed(2)} · ${count} expense${count === 1 ? "" : "s"}`, item.payload.label];
+                return [`${symbol}${amount.toFixed(2)} · ${count} expense${count === 1 ? "" : "s"}`, item.payload.label];
               }}
             />
             <Bar

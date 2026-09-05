@@ -8,6 +8,7 @@ import { CardListSkeleton } from "@/components/Skeleton";
 import AddExpenseForm from "@/components/AddExpenseForm";
 import CategoryBreakdownChart from "@/components/CategoryBreakdownChart";
 import ExpenseItem from "@/components/group/ExpenseItem";
+import { useCurrency } from "@/lib/currency";
 import { GroupMember } from "@/lib/groups";
 import {
   deleteExpense,
@@ -36,6 +37,7 @@ export default function ExpensesTab({
   onExpensesChanged,
   onDerivedDataChanged,
 }: ExpensesTabProps) {
+  const { symbol } = useCurrency();
   const [showExpenseForm, setShowExpenseForm] = useState(false);
   const [editingExpense, setEditingExpense] = useState<ExpenseResponse | null>(null);
   const [deletingExpenseId, setDeletingExpenseId] = useState<string | null>(null);
@@ -103,7 +105,7 @@ export default function ExpensesTab({
               : `${expenses.length} ${expenses.length === 1 ? "expense" : "expenses"}`}{" "}
             · Total{" "}
             <span className="font-bold text-ink">
-              ₹{(filteredExpenses ?? expenses).reduce((sum, e) => sum + e.amount, 0).toFixed(2)}
+              {symbol}{(filteredExpenses ?? expenses).reduce((sum, e) => sum + e.amount, 0).toFixed(2)}
             </span>
           </p>
         )}

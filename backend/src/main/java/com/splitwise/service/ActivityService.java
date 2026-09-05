@@ -3,6 +3,7 @@ package com.splitwise.service;
 import com.splitwise.dto.ActivityDtos.ActivityItem;
 import com.splitwise.dto.ActivityDtos.ActivityType;
 import com.splitwise.entity.Expense;
+import com.splitwise.entity.Group;
 import com.splitwise.entity.GroupMember;
 import com.splitwise.entity.Settlement;
 import com.splitwise.exception.ForbiddenException;
@@ -32,11 +33,12 @@ public class ActivityService {
 
     @Transactional(readOnly = true)
     public List<ActivityItem> getGroupActivity(String groupId, String requesterUserId) {
-        groupRepository.findById(groupId)
+        Group group = groupRepository.findById(groupId)
                 .orElseThrow(() -> new ResourceNotFoundException("Group not found"));
         List<GroupMember> members = groupMemberRepository.findByGroupId(groupId);
         requireMembership(members, requesterUserId);
 
+        String symbol = group.getCurrency().getSymbol();
         List<ActivityItem> items = new ArrayList<>();
 
         for (GroupMember member : members) {
@@ -55,7 +57,7 @@ public class ActivityService {
                     "expense-" + expense.getId(),
                     ActivityType.EXPENSE_ADDED,
                     expense.getPaidBy().getName() + " added \"" + expense.getDescription()
-                            + "\" (₹" + expense.getAmount() + ")",
+                            + "\" (" + symbol + expense.getAmount() + ")",
                     expense.getPaidBy().getId(),
                     expense.getPaidBy().getName(),
                     expense.getCreatedAt()
@@ -67,7 +69,7 @@ public class ActivityService {
                     "settlement-" + settlement.getId(),
                     ActivityType.SETTLEMENT_RECORDED,
                     settlement.getFromUser().getName() + " paid " + settlement.getToUser().getName()
-                            + " ₹" + settlement.getAmount(),
+                            + " " + symbol + settlement.getAmount(),
                     settlement.getFromUser().getId(),
                     settlement.getFromUser().getName(),
                     settlement.getSettledAt()

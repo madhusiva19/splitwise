@@ -95,7 +95,8 @@ public class ExpenseService {
                 String participantId = share.getUser().getId();
                 if (!participantId.equals(payerUserId)) {
                     notificationService.notify(participantId, NotificationType.EXPENSE_ADDED,
-                            payerName + " added an expense: " + req.description() + " (₹" + req.amount() + ")",
+                            payerName + " added an expense: " + req.description() + " ("
+                                    + group.getCurrency().getSymbol() + req.amount() + ")",
                             groupId);
                 }
             }
@@ -291,7 +292,7 @@ public class ExpenseService {
         try {
             String fromUserName = memberUsersById.get(fromUserId).getName();
             notificationService.notify(req.toUserId(), NotificationType.SETTLEMENT_RECORDED,
-                    fromUserName + " paid you ₹" + req.amount(), groupId);
+                    fromUserName + " paid you " + group.getCurrency().getSymbol() + req.amount(), groupId);
         } catch (Exception e) {
             log.warn("Failed to send SETTLEMENT_RECORDED notification for group {}", groupId, e);
         }
@@ -303,7 +304,7 @@ public class ExpenseService {
     // called by the person paying, so without this the person owed money had no action available.
     @Transactional
     public void sendSettlementReminder(String groupId, String requesterUserId, RemindSettlementRequest req) {
-        groupRepository.findById(groupId)
+        Group group = groupRepository.findById(groupId)
                 .orElseThrow(() -> new ResourceNotFoundException("Group not found"));
         List<GroupMember> members = groupMemberRepository.findByGroupId(groupId);
         requireMembership(members, requesterUserId);
@@ -318,7 +319,7 @@ public class ExpenseService {
         String requesterName = memberUsersById.get(requesterUserId).getName();
 
         notificationService.notify(req.toUserId(), NotificationType.PAYMENT_REMINDER,
-                requesterName + " reminded you to pay them ₹" + req.amount(), groupId);
+                requesterName + " reminded you to pay them " + group.getCurrency().getSymbol() + req.amount(), groupId);
     }
 
     @Transactional(readOnly = true)

@@ -9,6 +9,7 @@ import PageShell from "@/components/PageShell";
 import EmptyState from "@/components/EmptyState";
 import ErrorBanner from "@/components/ErrorBanner";
 import { CardListSkeleton } from "@/components/Skeleton";
+import { SUPPORTED_CURRENCIES } from "@/lib/currency";
 import { createGroup, listGroups, GroupSummaryResponse } from "@/lib/groups";
 
 export default function HomePage() {
@@ -19,6 +20,7 @@ export default function HomePage() {
 
   const [showForm, setShowForm] = useState(false);
   const [groupName, setGroupName] = useState("");
+  const [groupCurrency, setGroupCurrency] = useState("INR");
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
 
@@ -49,8 +51,9 @@ export default function HomePage() {
     setCreating(true);
 
     try {
-      await createGroup(groupName);
+      await createGroup(groupName, groupCurrency);
       setGroupName("");
+      setGroupCurrency("INR");
       setShowForm(false);
       await refreshGroups();
     } catch (err) {
@@ -93,6 +96,21 @@ export default function HomePage() {
               placeholder="Goa Trip"
               required
             />
+
+            <label className="block">
+              <span className="block font-mono text-xs uppercase tracking-wider text-ink/70">Currency</span>
+              <select
+                value={groupCurrency}
+                onChange={(e) => setGroupCurrency(e.target.value)}
+                className="mt-1 w-full border-0 border-b border-line bg-transparent py-1.5 font-sans text-ink outline-none transition-colors focus:border-ledger-green focus:ring-0"
+              >
+                {SUPPORTED_CURRENCIES.map((c) => (
+                  <option key={c.code} value={c.code}>
+                    {c.code} — {c.label} ({c.symbol})
+                  </option>
+                ))}
+              </select>
+            </label>
 
             {createError && <ErrorBanner message={createError} />}
 
@@ -144,7 +162,7 @@ export default function HomePage() {
                   <div className="flex items-center justify-between gap-3">
                     <span className="truncate font-mono text-base font-bold text-ink">{group.name}</span>
                     <span className="shrink-0 font-mono text-xs uppercase tracking-wider text-ink/60">
-                      {group.memberCount} {group.memberCount === 1 ? "member" : "members"}
+                      {group.memberCount} {group.memberCount === 1 ? "member" : "members"} · {group.currency}
                     </span>
                   </div>
                 </Card>

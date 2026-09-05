@@ -2,6 +2,7 @@ package com.splitwise.service;
 
 import com.splitwise.dto.ExpenseDtos.BalanceResponse;
 import com.splitwise.dto.GroupDtos.*;
+import com.splitwise.entity.Currency;
 import com.splitwise.entity.Group;
 import com.splitwise.entity.GroupMember;
 import com.splitwise.entity.NotificationType;
@@ -49,6 +50,7 @@ public class GroupService {
         Group group = Group.builder()
                 .name(req.name())
                 .createdBy(creator)
+                .currency(req.currency() != null ? req.currency() : Currency.INR)
                 .build();
         group = groupRepository.save(group);
 
@@ -69,7 +71,9 @@ public class GroupService {
                         group.getId(),
                         group.getName(),
                         groupMemberRepository.findByGroupId(group.getId()).size(),
-                        group.getCreatedAt()
+                        group.getCreatedAt(),
+                        group.getCurrency(),
+                        group.getCurrency().getSymbol()
                 ))
                 .toList();
     }
@@ -206,6 +210,8 @@ public class GroupService {
                 group.getCreatedBy().getId(),
                 group.getCreatedBy().getName(),
                 group.getCreatedAt(),
+                group.getCurrency(),
+                group.getCurrency().getSymbol(),
                 memberResponses
         );
     }
