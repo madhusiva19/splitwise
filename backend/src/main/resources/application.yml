@@ -34,6 +34,11 @@ app:
     auth:
       max-requests: ${AUTH_RATE_LIMIT_MAX_REQUESTS:10}
       window-seconds: ${AUTH_RATE_LIMIT_WINDOW_SECONDS:60}
+  settle-up-digest:
+    # Daily at 9am. A user only gets nudged once per stale period (see NotificationRepository),
+    # so a shorter cron here would just detect staleness sooner, not spam more nudges.
+    cron: ${SETTLE_UP_DIGEST_CRON:0 0 9 * * *}
+    stale-after-days: ${SETTLE_UP_DIGEST_STALE_AFTER_DAYS:3}
 
 jwt:
   secret: ${JWT_SECRET:change-this-to-a-long-random-base64-string-before-deploying}

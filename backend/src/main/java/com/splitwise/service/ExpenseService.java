@@ -221,7 +221,20 @@ public class ExpenseService {
                 .orElseThrow(() -> new ResourceNotFoundException("Group not found"));
         List<GroupMember> members = groupMemberRepository.findByGroupId(groupId);
         requireMembership(members, requesterUserId);
+        return computeBalances(groupId, members);
+    }
 
+    // No requester to check membership for — used by trusted internal callers (the settle-up
+    // digest scheduler) that already iterate every group directly, not a specific user's view.
+    @Transactional(readOnly = true)
+    public List<BalanceResponse> getGroupBalances(String groupId) {
+        groupRepository.findById(groupId)
+                .orElseThrow(() -> new ResourceNotFoundException("Group not found"));
+        List<GroupMember> members = groupMemberRepository.findByGroupId(groupId);
+        return computeBalances(groupId, members);
+    }
+
+    private List<BalanceResponse> computeBalances(String groupId, List<GroupMember> members) {
         Map<String, BigDecimal> paidByUser = expenseRepository.findByGroupId(groupId).stream()
                 .collect(Collectors.groupingBy(e -> e.getPaidBy().getId(),
                         Collectors.reducing(BigDecimal.ZERO, Expense::getAmount, BigDecimal::add)));

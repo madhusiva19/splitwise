@@ -6,7 +6,8 @@ export type NotificationType =
   | "SETTLEMENT_RECORDED"
   | "RECURRING_EXPENSE_CREATED"
   | "MEMBER_LEFT"
-  | "PAYMENT_REMINDER";
+  | "PAYMENT_REMINDER"
+  | "SETTLE_UP_NUDGE";
 
 export interface NotificationResponse {
   id: string;
