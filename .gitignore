@@ -1,0 +1,7 @@
+# Repo-wide safety net; backend/ and frontend/ have their own more specific .gitignore files.
+.env
+.env*.local
+*.log
+.DS_Store
+.idea/
+.vscode/
