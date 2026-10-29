@@ -91,6 +91,12 @@ public class ExpenseController {
         return ResponseEntity.ok(expenseService.getCategoryBreakdown(groupId, currentUser.getUserId()));
     }
 
+    @GetMapping("/spending-trend")
+    public ResponseEntity<SpendingTrendResponse> getSpendingTrend(@AuthenticationPrincipal AppUserDetails currentUser,
+                                                                     @PathVariable String groupId) {
+        return ResponseEntity.ok(expenseService.getSpendingTrend(groupId, currentUser.getUserId()));
+    }
+
     @PostMapping(value = "/expenses/{expenseId}/receipt", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<Void> uploadReceipt(@AuthenticationPrincipal AppUserDetails currentUser,
                                                @PathVariable String groupId,
@@ -105,9 +111,12 @@ public class ExpenseController {
                                               @PathVariable String groupId,
                                               @PathVariable String expenseId) {
         ExpenseReceiptService.ReceiptData receipt = expenseReceiptService.getReceipt(groupId, expenseId, currentUser.getUserId());
+        org.springframework.http.ContentDisposition contentDisposition = org.springframework.http.ContentDisposition.builder("inline")
+                .filename(receipt.fileName())
+                .build();
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType(receipt.contentType()))
-                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + receipt.fileName() + "\"")
+                .header(HttpHeaders.CONTENT_DISPOSITION, contentDisposition.toString())
                 .body(receipt.data());
     }
 

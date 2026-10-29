@@ -19,6 +19,7 @@ import com.splitwise.repository.GroupMemberRepository;
 import com.splitwise.repository.GroupRepository;
 import com.splitwise.repository.SettlementRepository;
 import com.splitwise.repository.UserRepository;
+import com.splitwise.util.ValidationUtil;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,8 +28,11 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.YearMonth;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.PriorityQueue;
@@ -56,7 +60,7 @@ public class ExpenseService {
         Group group = groupRepository.findById(groupId)
                 .orElseThrow(() -> new ResourceNotFoundException("Group not found"));
         List<GroupMember> members = groupMemberRepository.findByGroupId(groupId);
-        requireMembership(members, payerUserId);
+        ValidationUtil.requireMembership(members, payerUserId);
 
         Map<String, User> memberUsersById = members.stream()
                 .collect(Collectors.toMap(m -> m.getUser().getId(), GroupMember::getUser));
@@ -120,7 +124,7 @@ public class ExpenseService {
             throw new ResourceNotFoundException("Expense not found");
         }
         List<GroupMember> members = groupMemberRepository.findByGroupId(groupId);
-        requireMembership(members, requesterUserId);
+        ValidationUtil.requireMembership(members, requesterUserId);
         if (!expense.getPaidBy().getId().equals(requesterUserId)) {
             throw new ForbiddenException("Only the person who paid can edit this expense");
         }
@@ -178,7 +182,7 @@ public class ExpenseService {
             throw new ResourceNotFoundException("Expense not found");
         }
         List<GroupMember> members = groupMemberRepository.findByGroupId(groupId);
-        requireMembership(members, requesterUserId);
+        ValidationUtil.requireMembership(members, requesterUserId);
         if (!expense.getPaidBy().getId().equals(requesterUserId)) {
             throw new ForbiddenException("Only the person who paid can delete this expense");
         }
@@ -193,7 +197,7 @@ public class ExpenseService {
         groupRepository.findById(groupId)
                 .orElseThrow(() -> new ResourceNotFoundException("Group not found"));
         List<GroupMember> members = groupMemberRepository.findByGroupId(groupId);
-        requireMembership(members, requesterUserId);
+        ValidationUtil.requireMembership(members, requesterUserId);
 
         List<Expense> expenses = expenseRepository.findByGroupId(groupId);
         Set<String> withReceipts = expenseReceiptRepository.findExpenseIdsWithReceipt(
@@ -210,7 +214,7 @@ public class ExpenseService {
         groupRepository.findById(groupId)
                 .orElseThrow(() -> new ResourceNotFoundException("Group not found"));
         List<GroupMember> members = groupMemberRepository.findByGroupId(groupId);
-        requireMembership(members, requesterUserId);
+        ValidationUtil.requireMembership(members, requesterUserId);
 
         Map<ExpenseCategory, List<Expense>> byCategory = expenseRepository.findByGroupId(groupId).stream()
                 .collect(Collectors.groupingBy(Expense::getCategory));
@@ -225,12 +229,73 @@ public class ExpenseService {
                 .toList();
     }
 
+    // Six months of totals for the trend line, plus a this-month-vs-last-month comparison per
+    // category so the frontend can call out "up 40% on Food this month" style insights. Bucketed
+    // by UTC calendar month — there's no per-group timezone concept anywhere else in the app.
+    @Transactional(readOnly = true)
+    public SpendingTrendResponse getSpendingTrend(String groupId, String requesterUserId) {
+        groupRepository.findById(groupId)
+                .orElseThrow(() -> new ResourceNotFoundException("Group not found"));
+        List<GroupMember> members = groupMemberRepository.findByGroupId(groupId);
+        ValidationUtil.requireMembership(members, requesterUserId);
+
+        List<Expense> expenses = expenseRepository.findByGroupId(groupId);
+
+        YearMonth currentMonth = YearMonth.now(ZoneOffset.UTC);
+        Map<YearMonth, BigDecimal> totalsByMonth = expenses.stream()
+                .collect(Collectors.groupingBy(
+                        e -> YearMonth.from(e.getCreatedAt().atZone(ZoneOffset.UTC)),
+                        Collectors.reducing(BigDecimal.ZERO, Expense::getAmount, BigDecimal::add)));
+
+        List<MonthlySpendPoint> monthlyTotals = new ArrayList<>();
+        for (int i = 5; i >= 0; i--) {
+            YearMonth month = currentMonth.minusMonths(i);
+            monthlyTotals.add(new MonthlySpendPoint(month.toString(), totalsByMonth.getOrDefault(month, BigDecimal.ZERO)));
+        }
+
+        YearMonth previousMonth = currentMonth.minusMonths(1);
+        Map<ExpenseCategory, BigDecimal> currentByCategory = sumByCategoryForMonth(expenses, currentMonth);
+        Map<ExpenseCategory, BigDecimal> previousByCategory = sumByCategoryForMonth(expenses, previousMonth);
+
+        Set<ExpenseCategory> categories = new LinkedHashSet<>();
+        categories.addAll(currentByCategory.keySet());
+        categories.addAll(previousByCategory.keySet());
+
+        List<CategoryTrend> categoryTrends = categories.stream()
+                .map(cat -> {
+                    BigDecimal current = currentByCategory.getOrDefault(cat, BigDecimal.ZERO);
+                    BigDecimal previous = previousByCategory.getOrDefault(cat, BigDecimal.ZERO);
+                    return new CategoryTrend(cat, current, previous, percentChange(current, previous));
+                })
+                .sorted(Comparator.comparing(CategoryTrend::currentMonthAmount).reversed())
+                .toList();
+
+        return new SpendingTrendResponse(monthlyTotals, categoryTrends);
+    }
+
+    private Map<ExpenseCategory, BigDecimal> sumByCategoryForMonth(List<Expense> expenses, YearMonth month) {
+        return expenses.stream()
+                .filter(e -> YearMonth.from(e.getCreatedAt().atZone(ZoneOffset.UTC)).equals(month))
+                .collect(Collectors.groupingBy(Expense::getCategory,
+                        Collectors.reducing(BigDecimal.ZERO, Expense::getAmount, BigDecimal::add)));
+    }
+
+    private Double percentChange(BigDecimal current, BigDecimal previous) {
+        if (previous.compareTo(BigDecimal.ZERO) == 0) {
+            return current.compareTo(BigDecimal.ZERO) == 0 ? 0.0 : null;
+        }
+        return current.subtract(previous)
+                .divide(previous, 4, RoundingMode.HALF_UP)
+                .multiply(BigDecimal.valueOf(100))
+                .doubleValue();
+    }
+
     @Transactional(readOnly = true)
     public List<BalanceResponse> getGroupBalances(String groupId, String requesterUserId) {
         groupRepository.findById(groupId)
                 .orElseThrow(() -> new ResourceNotFoundException("Group not found"));
         List<GroupMember> members = groupMemberRepository.findByGroupId(groupId);
-        requireMembership(members, requesterUserId);
+        ValidationUtil.requireMembership(members, requesterUserId);
         return computeBalances(groupId, members);
     }
 
@@ -279,8 +344,8 @@ public class ExpenseService {
         Group group = groupRepository.findById(groupId)
                 .orElseThrow(() -> new ResourceNotFoundException("Group not found"));
         List<GroupMember> members = groupMemberRepository.findByGroupId(groupId);
-        requireMembership(members, fromUserId);
-        requireMembership(members, req.toUserId());
+        ValidationUtil.requireMembership(members, fromUserId);
+        ValidationUtil.requireMembership(members, req.toUserId());
 
         if (fromUserId.equals(req.toUserId())) {
             throw new BadRequestException("You can't record a settlement paying yourself");
@@ -316,8 +381,8 @@ public class ExpenseService {
         Group group = groupRepository.findById(groupId)
                 .orElseThrow(() -> new ResourceNotFoundException("Group not found"));
         List<GroupMember> members = groupMemberRepository.findByGroupId(groupId);
-        requireMembership(members, requesterUserId);
-        requireMembership(members, req.toUserId());
+        ValidationUtil.requireMembership(members, requesterUserId);
+        ValidationUtil.requireMembership(members, req.toUserId());
 
         if (requesterUserId.equals(req.toUserId())) {
             throw new BadRequestException("You can't remind yourself");
@@ -336,7 +401,7 @@ public class ExpenseService {
         groupRepository.findById(groupId)
                 .orElseThrow(() -> new ResourceNotFoundException("Group not found"));
         List<GroupMember> members = groupMemberRepository.findByGroupId(groupId);
-        requireMembership(members, requesterUserId);
+        ValidationUtil.requireMembership(members, requesterUserId);
 
         return settlementRepository.findByGroupId(groupId).stream()
                 .sorted(Comparator.comparing(Settlement::getSettledAt).reversed())
@@ -352,7 +417,7 @@ public class ExpenseService {
         groupRepository.findById(groupId)
                 .orElseThrow(() -> new ResourceNotFoundException("Group not found"));
         List<GroupMember> members = groupMemberRepository.findByGroupId(groupId);
-        requireMembership(members, requesterUserId);
+        ValidationUtil.requireMembership(members, requesterUserId);
 
         List<BalanceResponse> balances = getGroupBalances(groupId, requesterUserId);
 
@@ -398,14 +463,7 @@ public class ExpenseService {
         return suggestions;
     }
 
-    // Membership is the gate for all expense/balance access — a non-member can't view or add
-    // expenses for a group they don't belong to.
-    private void requireMembership(List<GroupMember> members, String userId) {
-        boolean isMember = members.stream().anyMatch(m -> m.getUser().getId().equals(userId));
-        if (!isMember) {
-            throw new ForbiddenException("You're not a member of this group");
-        }
-    }
+
 
     private List<ExpenseShare> buildEqualShares(Expense expense, BigDecimal amount, List<String> participantUserIds,
                                                  Map<String, User> memberUsersById) {
@@ -479,7 +537,7 @@ public class ExpenseService {
 
     private ExpenseResponse toExpenseResponse(Expense expense, boolean hasReceipt) {
         List<ExpenseShareResponse> shareResponses = expense.getShares().stream()
-                .map(s -> new ExpenseShareResponse(s.getUser().getId(), s.getUser().getName(), s.getShareAmount(), s.isSettled()))
+                .map(s -> new ExpenseShareResponse(s.getUser().getId(), s.getUser().getName(), s.getShareAmount()))
                 .toList();
 
         return new ExpenseResponse(

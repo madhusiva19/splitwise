@@ -12,6 +12,7 @@ import com.splitwise.repository.ExpenseRepository;
 import com.splitwise.repository.GroupMemberRepository;
 import com.splitwise.repository.GroupRepository;
 import com.splitwise.repository.SettlementRepository;
+import com.splitwise.util.ValidationUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -36,7 +37,7 @@ public class ActivityService {
         Group group = groupRepository.findById(groupId)
                 .orElseThrow(() -> new ResourceNotFoundException("Group not found"));
         List<GroupMember> members = groupMemberRepository.findByGroupId(groupId);
-        requireMembership(members, requesterUserId);
+        ValidationUtil.requireMembership(members, requesterUserId);
 
         String symbol = group.getCurrency().getSymbol();
         List<ActivityItem> items = new ArrayList<>();
@@ -79,12 +80,5 @@ public class ActivityService {
         return items.stream()
                 .sorted(Comparator.comparing(ActivityItem::occurredAt).reversed())
                 .toList();
-    }
-
-    private void requireMembership(List<GroupMember> members, String userId) {
-        boolean isMember = members.stream().anyMatch(m -> m.getUser().getId().equals(userId));
-        if (!isMember) {
-            throw new ForbiddenException("You're not a member of this group");
-        }
     }
 }

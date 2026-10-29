@@ -22,6 +22,8 @@ import java.util.Base64;
 @RequiredArgsConstructor
 public class AuthService {
 
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(AuthService.class);
+
     private final UserRepository userRepository;
     private final RefreshTokenRepository refreshTokenRepository;
     private final PasswordEncoder passwordEncoder;
@@ -116,5 +118,12 @@ public class AuthService {
         } catch (NoSuchAlgorithmException e) {
             throw new IllegalStateException("SHA-256 not available", e);
         }
+    }
+
+    @org.springframework.scheduling.annotation.Scheduled(cron = "0 0 3 * * *") // run at 3 AM daily
+    @Transactional
+    public void cleanupTokens() {
+        int deleted = refreshTokenRepository.deleteRevokedOrExpiredTokens(Instant.now());
+        log.info("Cleaned up {} expired or revoked refresh tokens", deleted);
     }
 }

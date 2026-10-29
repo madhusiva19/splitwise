@@ -1,10 +1,13 @@
 package com.splitwise.service;
 
 import com.splitwise.dto.ExpenseDtos.BalanceResponse;
+import com.splitwise.dto.ExpenseDtos.CategoryTrend;
 import com.splitwise.dto.ExpenseDtos.CreateExpenseRequest;
 import com.splitwise.dto.ExpenseDtos.ExpenseResponse;
 import com.splitwise.dto.ExpenseDtos.ExpenseShareInput;
+import com.splitwise.dto.ExpenseDtos.MonthlySpendPoint;
 import com.splitwise.dto.ExpenseDtos.SettlementSuggestion;
+import com.splitwise.dto.ExpenseDtos.SpendingTrendResponse;
 import com.splitwise.dto.ExpenseDtos.UpdateExpenseRequest;
 import com.splitwise.entity.Expense;
 import com.splitwise.entity.ExpenseCategory;
@@ -33,6 +36,9 @@ import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
 
 import java.math.BigDecimal;
+import java.time.Instant;
+import java.time.YearMonth;
+import java.time.ZoneOffset;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -43,8 +49,7 @@ import static org.mockito.Mockito.when;
 
 // Pure unit tests (Mockito-mocked repositories, no Spring context, no DB) — fast and
 // deterministic on purpose, since this class holds the split-calculation and balance-netting
-// logic where a silent bug would be worst. RecurringExpenseServiceTest instead hits the real
-// datasource; this class deliberately doesn't need to.
+// logic where a silent bug would be worst. No test in this suite needs a database.
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
 class ExpenseServiceTest {
@@ -360,5 +365,92 @@ class ExpenseServiceTest {
         List<SettlementSuggestion> suggestions = expenseService.suggestSettlements(GROUP_ID, "alice");
 
         assertThat(suggestions).isEmpty();
+    }
+
+    // ---- Spending trend ----
+
+    // Day 15 of a given month at UTC midnight — avoids any flakiness from running near a
+    // month boundary, since offsetting by a fixed number of days from "now" wouldn't reliably
+    // land in the intended calendar month every time this suite runs.
+    private Instant midMonth(YearMonth month) {
+        return month.atDay(15).atStartOfDay(ZoneOffset.UTC).toInstant();
+    }
+
+    private Expense expenseIn(YearMonth month, BigDecimal amount, ExpenseCategory category) {
+        return Expense.builder()
+                .id("exp-" + month + "-" + category).group(group).paidBy(alice)
+                .description("Expense").amount(amount).splitType(SplitType.EQUAL)
+                .category(category).createdAt(midMonth(month)).build();
+    }
+
+    @Test
+    void spendingTrend_bucketsMonthlyTotalsOverLastSixMonthsZeroFillingGaps() {
+        YearMonth current = YearMonth.now(ZoneOffset.UTC);
+        List<Expense> expenses = List.of(
+                expenseIn(current, new BigDecimal("50.00"), ExpenseCategory.FOOD),
+                expenseIn(current.minusMonths(2), new BigDecimal("30.00"), ExpenseCategory.TRAVEL)
+        );
+        when(expenseRepository.findByGroupId(GROUP_ID)).thenReturn(expenses);
+
+        SpendingTrendResponse trend = expenseService.getSpendingTrend(GROUP_ID, "alice");
+
+        assertThat(trend.monthlyTotals()).hasSize(6);
+        assertThat(trend.monthlyTotals().get(5).month()).isEqualTo(current.toString());
+        assertThat(trend.monthlyTotals().get(5).totalAmount()).isEqualByComparingTo("50.00");
+        assertThat(trend.monthlyTotals().get(3).month()).isEqualTo(current.minusMonths(2).toString());
+        assertThat(trend.monthlyTotals().get(3).totalAmount()).isEqualByComparingTo("30.00");
+        // every other month had no expenses at all
+        assertThat(trend.monthlyTotals().get(0).totalAmount()).isEqualByComparingTo("0.00");
+        assertThat(trend.monthlyTotals().get(4).totalAmount()).isEqualByComparingTo("0.00");
+    }
+
+    @Test
+    void spendingTrend_computesPercentChangeForCategoryPresentInBothMonths() {
+        YearMonth current = YearMonth.now(ZoneOffset.UTC);
+        List<Expense> expenses = List.of(
+                expenseIn(current, new BigDecimal("140.00"), ExpenseCategory.FOOD),
+                expenseIn(current.minusMonths(1), new BigDecimal("100.00"), ExpenseCategory.FOOD)
+        );
+        when(expenseRepository.findByGroupId(GROUP_ID)).thenReturn(expenses);
+
+        SpendingTrendResponse trend = expenseService.getSpendingTrend(GROUP_ID, "alice");
+
+        CategoryTrend foodTrend = trend.categoryTrends().stream()
+                .filter(t -> t.category() == ExpenseCategory.FOOD).findFirst().orElseThrow();
+        assertThat(foodTrend.currentMonthAmount()).isEqualByComparingTo("140.00");
+        assertThat(foodTrend.previousMonthAmount()).isEqualByComparingTo("100.00");
+        assertThat(foodTrend.percentChange()).isEqualTo(40.0);
+    }
+
+    @Test
+    void spendingTrend_reportsFullDropWhenCategoryStoppedThisMonth() {
+        YearMonth current = YearMonth.now(ZoneOffset.UTC);
+        List<Expense> expenses = List.of(
+                expenseIn(current.minusMonths(1), new BigDecimal("60.00"), ExpenseCategory.TRAVEL)
+        );
+        when(expenseRepository.findByGroupId(GROUP_ID)).thenReturn(expenses);
+
+        SpendingTrendResponse trend = expenseService.getSpendingTrend(GROUP_ID, "alice");
+
+        CategoryTrend travelTrend = trend.categoryTrends().stream()
+                .filter(t -> t.category() == ExpenseCategory.TRAVEL).findFirst().orElseThrow();
+        assertThat(travelTrend.currentMonthAmount()).isEqualByComparingTo("0.00");
+        assertThat(travelTrend.percentChange()).isEqualTo(-100.0);
+    }
+
+    @Test
+    void spendingTrend_returnsNullPercentChangeForBrandNewCategoryThisMonth() {
+        YearMonth current = YearMonth.now(ZoneOffset.UTC);
+        List<Expense> expenses = List.of(
+                expenseIn(current, new BigDecimal("25.00"), ExpenseCategory.ENTERTAINMENT)
+        );
+        when(expenseRepository.findByGroupId(GROUP_ID)).thenReturn(expenses);
+
+        SpendingTrendResponse trend = expenseService.getSpendingTrend(GROUP_ID, "alice");
+
+        CategoryTrend entertainmentTrend = trend.categoryTrends().stream()
+                .filter(t -> t.category() == ExpenseCategory.ENTERTAINMENT).findFirst().orElseThrow();
+        assertThat(entertainmentTrend.previousMonthAmount()).isEqualByComparingTo("0.00");
+        assertThat(entertainmentTrend.percentChange()).isNull();
     }
 }

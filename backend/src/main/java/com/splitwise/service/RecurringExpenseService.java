@@ -17,6 +17,7 @@ import com.splitwise.exception.ResourceNotFoundException;
 import com.splitwise.repository.GroupMemberRepository;
 import com.splitwise.repository.GroupRepository;
 import com.splitwise.repository.RecurringExpenseTemplateRepository;
+import com.splitwise.util.ValidationUtil;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -48,7 +49,7 @@ public class RecurringExpenseService {
         Group group = groupRepository.findById(groupId)
                 .orElseThrow(() -> new ResourceNotFoundException("Group not found"));
         List<GroupMember> members = groupMemberRepository.findByGroupId(groupId);
-        requireMembership(members, creatorUserId);
+        ValidationUtil.requireMembership(members, creatorUserId);
 
         Map<String, User> memberUsersById = members.stream()
                 .collect(Collectors.toMap(m -> m.getUser().getId(), GroupMember::getUser));
@@ -85,7 +86,7 @@ public class RecurringExpenseService {
         groupRepository.findById(groupId)
                 .orElseThrow(() -> new ResourceNotFoundException("Group not found"));
         List<GroupMember> members = groupMemberRepository.findByGroupId(groupId);
-        requireMembership(members, requesterUserId);
+        ValidationUtil.requireMembership(members, requesterUserId);
 
         return recurringExpenseTemplateRepository.findByGroupId(groupId).stream()
                 .map(this::toResponse)
@@ -96,6 +97,9 @@ public class RecurringExpenseService {
     public void deactivateTemplate(String templateId, String requesterUserId) {
         RecurringExpenseTemplate template = recurringExpenseTemplateRepository.findById(templateId)
                 .orElseThrow(() -> new ResourceNotFoundException("Recurring expense not found"));
+
+        List<GroupMember> members = groupMemberRepository.findByGroupId(template.getGroup().getId());
+        ValidationUtil.requireMembership(members, requesterUserId);
 
         if (!template.getCreatedBy().getId().equals(requesterUserId)) {
             throw new ForbiddenException("Only the creator can deactivate this recurring expense");
@@ -152,12 +156,6 @@ public class RecurringExpenseService {
         };
     }
 
-    private void requireMembership(List<GroupMember> members, String userId) {
-        boolean isMember = members.stream().anyMatch(m -> m.getUser().getId().equals(userId));
-        if (!isMember) {
-            throw new ForbiddenException("You're not a member of this group");
-        }
-    }
 
     private RecurringExpenseResponse toResponse(RecurringExpenseTemplate template) {
         return new RecurringExpenseResponse(

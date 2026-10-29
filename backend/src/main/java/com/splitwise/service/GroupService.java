@@ -19,6 +19,7 @@ import com.splitwise.repository.NotificationRepository;
 import com.splitwise.repository.RecurringExpenseTemplateRepository;
 import com.splitwise.repository.SettlementRepository;
 import com.splitwise.repository.UserRepository;
+import com.splitwise.util.ValidationUtil;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -87,7 +88,7 @@ public class GroupService {
                 .orElseThrow(() -> new ResourceNotFoundException("Group not found"));
         List<GroupMember> members = groupMemberRepository.findByGroupId(groupId);
 
-        requireMembership(members, requesterUserId);
+        ValidationUtil.requireMembership(members, requesterUserId);
 
         return toGroupResponse(group, members);
     }
@@ -98,7 +99,7 @@ public class GroupService {
                 .orElseThrow(() -> new ResourceNotFoundException("Group not found"));
         List<GroupMember> members = groupMemberRepository.findByGroupId(groupId);
 
-        requireMembership(members, requesterUserId);
+        ValidationUtil.requireMembership(members, requesterUserId);
 
         User invitee = userRepository.findByEmail(req.email())
                 .orElseThrow(() -> new BadRequestException("No account found with this email — they need to sign up first"));
@@ -164,7 +165,7 @@ public class GroupService {
         Group group = groupRepository.findById(groupId)
                 .orElseThrow(() -> new ResourceNotFoundException("Group not found"));
         List<GroupMember> members = groupMemberRepository.findByGroupId(groupId);
-        requireMembership(members, requesterUserId);
+        ValidationUtil.requireMembership(members, requesterUserId);
 
         if (group.getCreatedBy().getId().equals(requesterUserId)) {
             throw new BadRequestException("The group creator can't leave — delete the group instead");
@@ -198,13 +199,6 @@ public class GroupService {
         }
     }
 
-    // Membership is the gate for all group access — a non-member can't view or modify a group they don't belong to.
-    private void requireMembership(List<GroupMember> members, String userId) {
-        boolean isMember = members.stream().anyMatch(m -> m.getUser().getId().equals(userId));
-        if (!isMember) {
-            throw new ForbiddenException("You're not a member of this group");
-        }
-    }
 
     private GroupResponse toGroupResponse(Group group, List<GroupMember> members) {
         List<MemberResponse> memberResponses = members.stream()

@@ -28,8 +28,4 @@ public class ExpenseShare {
 
     @Column(name = "share_amount", nullable = false, precision = 12, scale = 2)
     private BigDecimal shareAmount;
-
-    @Column(nullable = false)
-    @Builder.Default
-    private boolean settled = false;
 }
