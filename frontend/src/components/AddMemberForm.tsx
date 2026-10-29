@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, FormEvent } from "react";
 import { addMember, GroupMember, GroupResponse } from "@/lib/groups";
 import { searchUsers, UserSearchResult } from "@/lib/users";
 import ErrorBanner from "@/components/ErrorBanner";
+import Button from "@/components/Button";
 
 interface AddMemberFormProps {
   groupId: string;
@@ -80,7 +81,7 @@ export default function AddMemberForm({ groupId, existingMembers, onAdded, onCan
     <form onSubmit={handleSubmit} className="space-y-4" noValidate>
       <div className="relative">
         <label className="block">
-          <span className="block font-mono text-xs uppercase tracking-wider text-ink/70">
+          <span className="block font-sans text-sm font-medium text-ink-muted">
             Add member
           </span>
           <input
@@ -95,14 +96,14 @@ export default function AddMemberForm({ groupId, existingMembers, onAdded, onCan
             onBlur={() => setTimeout(() => setShowResults(false), 150)}
             placeholder="Search by name or email"
             autoComplete="off"
-            className="mt-1 w-full border-0 border-b border-line bg-transparent py-1.5 font-sans text-ink outline-none transition-colors focus:border-ledger-green focus:ring-0"
+            className="mt-1.5 w-full rounded-xl border border-transparent bg-surface-muted px-4 py-2.5 font-sans text-ink outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20"
           />
         </label>
 
         {showResults && (searching || results.length > 0) && (
-          <ul className="absolute z-10 mt-1 max-h-56 w-full overflow-y-auto rounded-sm border border-line bg-paper shadow-sm">
+          <ul className="absolute z-10 mt-1 max-h-56 w-full overflow-y-auto rounded-2xl border border-border bg-surface shadow-card dark:shadow-card-dark">
             {searching ? (
-              <li className="px-3 py-2 font-mono text-xs text-ink/60">Searching…</li>
+              <li className="px-3.5 py-2.5 font-sans text-sm text-ink-muted">Searching…</li>
             ) : (
               results.map((user) => (
                 <li key={user.id}>
@@ -110,10 +111,10 @@ export default function AddMemberForm({ groupId, existingMembers, onAdded, onCan
                     type="button"
                     onMouseDown={(e) => e.preventDefault()}
                     onClick={() => selectUser(user)}
-                    className="flex w-full flex-col items-start px-3 py-2 text-left transition-colors hover:bg-ledger-green/10 focus-visible:bg-ledger-green/10 focus-visible:outline-none"
+                    className="flex w-full flex-col items-start px-3.5 py-2.5 text-left transition-colors hover:bg-surface-muted focus-visible:bg-surface-muted focus-visible:outline-none"
                   >
                     <span className="font-sans text-sm text-ink">{user.name}</span>
-                    <span className="font-mono text-xs text-ink/60">{user.email}</span>
+                    <span className="font-sans text-xs text-ink-muted">{user.email}</span>
                   </button>
                 </li>
               ))
@@ -125,20 +126,12 @@ export default function AddMemberForm({ groupId, existingMembers, onAdded, onCan
       {error && <ErrorBanner message={error} />}
 
       <div className="flex gap-3">
-        <button
-          type="submit"
-          disabled={adding || !query.trim()}
-          className="flex-1 rounded-sm bg-ledger-green py-2.5 font-mono text-sm font-bold uppercase tracking-wider text-paper transition-colors hover:bg-ledger-green-dark active:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ledger-green disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          {adding ? "Adding…" : "Add member"}
-        </button>
-        <button
-          type="button"
-          onClick={onCancel}
-          className="rounded-sm border border-line px-4 py-2.5 font-mono text-sm font-bold uppercase tracking-wider text-ink/70 transition-colors hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ledger-green"
-        >
+        <Button type="submit" fullWidth disabled={!query.trim()} loading={adding} loadingLabel="Adding…">
+          Add member
+        </Button>
+        <Button type="button" variant="ghost" onClick={onCancel}>
           Cancel
-        </button>
+        </Button>
       </div>
     </form>
   );

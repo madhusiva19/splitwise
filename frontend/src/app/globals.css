@@ -3,59 +3,54 @@
 @tailwind utilities;
 
 :root {
-  --color-paper: 250 246 238;
-  --color-ink: 34 38 31;
-  --color-ledger-green: 47 111 78;
-  --color-ledger-green-dark: 35 79 56;
-  --color-debt: 179 73 47;
-  --color-line: 216 208 188;
+  --color-bg: 244 242 250;
+  --color-surface: 255 255 255;
+  --color-surface-muted: 237 234 247;
+  --color-ink: 23 22 29;
+  --color-ink-muted: 142 139 152;
+  --color-border: 230 227 240;
+  --color-primary: 124 92 252;
+  --color-primary-soft: 237 232 254;
+  --color-accent: 255 198 41;
+  --color-accent-soft: 255 241 199;
+  --color-positive: 46 182 125;
+  --color-negative: 240 97 90;
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --color-paper: 26 24 21;
-    --color-ink: 237 232 220;
-    --color-ledger-green: 79 174 124;
-    --color-ledger-green-dark: 61 140 99;
-    --color-debt: 224 120 86;
-    --color-line: 58 54 46;
+    --color-bg: 24 23 29;
+    --color-surface: 38 37 45;
+    --color-surface-muted: 47 46 56;
+    --color-ink: 245 243 250;
+    --color-ink-muted: 148 145 160;
+    --color-border: 44 43 53;
+    --color-primary: 145 120 255;
+    --color-primary-soft: 51 43 74;
+    --color-accent: 255 198 41;
+    --color-accent-soft: 61 51 27;
+    --color-positive: 52 201 138;
+    --color-negative: 244 111 103;
   }
 }
 
 :root[data-theme="dark"] {
-  --color-paper: 26 24 21;
-  --color-ink: 237 232 220;
-  --color-ledger-green: 79 174 124;
-  --color-ledger-green-dark: 61 140 99;
-  --color-debt: 224 120 86;
-  --color-line: 58 54 46;
+  --color-bg: 24 23 29;
+  --color-surface: 38 37 45;
+  --color-surface-muted: 47 46 56;
+  --color-ink: 245 243 250;
+  --color-ink-muted: 148 145 160;
+  --color-border: 44 43 53;
+  --color-primary: 145 120 255;
+  --color-primary-soft: 51 43 74;
+  --color-accent: 255 198 41;
+  --color-accent-soft: 61 51 27;
+  --color-positive: 52 201 138;
+  --color-negative: 244 111 103;
 }
 
 @layer base {
   body {
-    @apply bg-paper text-ink font-sans transition-colors duration-200;
-  }
-}
-
-@layer components {
-  /* Row of small punched-hole circles along the top edge of the auth card,
-     like a ticket stub torn from a receipt roll. */
-  .perforated-top {
-    height: 18px;
-    background-image: radial-gradient(
-      circle at center,
-      rgb(var(--color-paper)) 0 5px,
-      rgb(var(--color-line)) 5px 6px,
-      transparent 6px 100%
-    );
-    background-size: 22px 22px;
-    background-position: center;
-    background-repeat: repeat-x;
-  }
-
-  /* Dashed "stitch" line used between the Login/Signup tabs, and under the
-     perforated edge, to sell the torn-paper look. */
-  .stitch-divider {
-    border-top: 2px dashed rgb(var(--color-line));
+    @apply bg-bg text-ink font-sans transition-colors duration-200;
   }
 }

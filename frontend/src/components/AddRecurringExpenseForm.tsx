@@ -3,6 +3,7 @@
 import { useState, FormEvent } from "react";
 import Field from "@/components/Field";
 import ErrorBanner from "@/components/ErrorBanner";
+import Button from "@/components/Button";
 import SegmentedControl from "@/components/SegmentedControl";
 import { EXPENSE_CATEGORIES, ExpenseCategory, formatCategory } from "@/lib/expenses";
 import { GroupMember } from "@/lib/groups";
@@ -98,8 +99,8 @@ export default function AddRecurringExpenseForm({
       <SegmentedControl label="Repeats" options={FREQUENCY_OPTIONS} value={frequency} onChange={setFrequency} />
 
       <div>
-        <span className="mb-2 block font-mono text-xs uppercase tracking-wider text-ink/70">
-          Category <span className="normal-case text-ink/40">(optional)</span>
+        <span className="mb-2 block font-sans text-sm font-medium text-ink-muted">
+          Category <span className="text-ink-muted/60">(optional)</span>
         </span>
         <div className="flex flex-wrap gap-2">
           {EXPENSE_CATEGORIES.map((c) => {
@@ -110,10 +111,10 @@ export default function AddRecurringExpenseForm({
                 type="button"
                 onClick={() => setCategory(selected ? undefined : c)}
                 aria-pressed={selected}
-                className={`rounded-full border px-3 py-1 font-mono text-xs transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ledger-green ${
+                className={`rounded-full px-3.5 py-1.5 font-sans text-sm font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
                   selected
-                    ? "border-ledger-green bg-ledger-green text-paper"
-                    : "border-line text-ink/60 hover:text-ink"
+                    ? "bg-primary text-white"
+                    : "bg-surface-muted text-ink-muted hover:text-ink"
                 }`}
               >
                 {formatCategory(c)}
@@ -123,8 +124,8 @@ export default function AddRecurringExpenseForm({
         </div>
       </div>
 
-      <div className="rounded-sm border border-line px-4 py-3">
-        <span className="mb-2 block font-mono text-xs uppercase tracking-wider text-ink/70">
+      <div className="rounded-2xl border border-border px-4 py-3.5">
+        <span className="mb-2 block font-sans text-sm font-medium text-ink-muted">
           Participants (split equally)
         </span>
         <div className="space-y-2">
@@ -134,7 +135,7 @@ export default function AddRecurringExpenseForm({
                 type="checkbox"
                 checked={participantIds.includes(member.userId)}
                 onChange={() => toggleParticipant(member.userId)}
-                className="h-4 w-4 rounded-sm border-line text-ledger-green focus:ring-ledger-green"
+                className="h-4 w-4 rounded border-border text-primary focus:ring-primary"
               />
               {member.name}
             </label>
@@ -145,20 +146,12 @@ export default function AddRecurringExpenseForm({
       {error && <ErrorBanner message={error} />}
 
       <div className="flex gap-3">
-        <button
-          type="submit"
-          disabled={!canSubmit || saving}
-          className="flex-1 rounded-sm bg-ledger-green py-2.5 font-mono text-sm font-bold uppercase tracking-wider text-paper transition-colors hover:bg-ledger-green-dark active:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ledger-green disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          {saving ? "Saving…" : "Add recurring expense"}
-        </button>
-        <button
-          type="button"
-          onClick={onCancel}
-          className="rounded-sm border border-line px-4 py-2.5 font-mono text-sm font-bold uppercase tracking-wider text-ink/70 transition-colors hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ledger-green"
-        >
+        <Button type="submit" fullWidth disabled={!canSubmit} loading={saving} loadingLabel="Saving…">
+          Add recurring expense
+        </Button>
+        <Button type="button" variant="ghost" onClick={onCancel}>
           Cancel
-        </button>
+        </Button>
       </div>
     </form>
   );

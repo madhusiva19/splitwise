@@ -104,6 +104,24 @@ export interface CategoryBreakdown {
   expenseCount: number;
 }
 
+export interface MonthlySpendPoint {
+  month: string; // "YYYY-MM"
+  totalAmount: number;
+}
+
+export interface CategoryTrend {
+  category: ExpenseCategory;
+  currentMonthAmount: number;
+  previousMonthAmount: number;
+  // null means "undefined" (previous month was zero) — render as "new this month" rather than a percentage.
+  percentChange: number | null;
+}
+
+export interface SpendingTrendResponse {
+  monthlyTotals: MonthlySpendPoint[];
+  categoryTrends: CategoryTrend[];
+}
+
 export function createExpense(groupId: string, req: CreateExpenseRequest): Promise<ExpenseResponse> {
   return apiFetch<ExpenseResponse>(`/groups/${groupId}/expenses`, {
     method: "POST",
@@ -156,6 +174,10 @@ export function remindSettlement(groupId: string, req: RemindSettlementRequest):
 
 export function getCategoryBreakdown(groupId: string): Promise<CategoryBreakdown[]> {
   return apiFetch<CategoryBreakdown[]>(`/groups/${groupId}/categories/breakdown`);
+}
+
+export function getSpendingTrend(groupId: string): Promise<SpendingTrendResponse> {
+  return apiFetch<SpendingTrendResponse>(`/groups/${groupId}/spending-trend`);
 }
 
 export function formatCategory(category: ExpenseCategory): string {

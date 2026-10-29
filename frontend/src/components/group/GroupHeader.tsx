@@ -6,6 +6,7 @@ import Card from "@/components/Card";
 import ErrorBanner from "@/components/ErrorBanner";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import AddMemberForm from "@/components/AddMemberForm";
+import Avatar from "@/components/Avatar";
 import { GroupResponse, deleteGroup, leaveGroup } from "@/lib/groups";
 
 interface GroupHeaderProps {
@@ -59,13 +60,13 @@ export default function GroupHeader({ groupId, group, currentUserId, onGroupUpda
     <>
       <header className="mb-6">
         <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1">
-          <h1 className="break-words font-mono text-2xl font-bold text-ink sm:text-3xl">{group.name}</h1>
+          <h1 className="break-words font-sans text-2xl font-extrabold text-ink sm:text-3xl">{group.name}</h1>
           {group.createdByUserId === currentUserId ? (
             <button
               type="button"
               onClick={() => setShowDeleteGroupDialog(true)}
               disabled={deletingGroup}
-              className="whitespace-nowrap rounded-sm font-mono text-xs font-bold text-debt transition-colors hover:text-debt/80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-debt disabled:cursor-not-allowed disabled:opacity-60"
+              className="whitespace-nowrap rounded-full font-sans text-sm font-semibold text-negative transition-colors hover:opacity-80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-negative disabled:cursor-not-allowed disabled:opacity-60"
             >
               {deletingGroup ? "Deleting…" : "Delete group"}
             </button>
@@ -74,7 +75,7 @@ export default function GroupHeader({ groupId, group, currentUserId, onGroupUpda
               type="button"
               onClick={() => setShowLeaveGroupDialog(true)}
               disabled={leavingGroup}
-              className="whitespace-nowrap rounded-sm font-mono text-xs font-bold text-debt transition-colors hover:text-debt/80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-debt disabled:cursor-not-allowed disabled:opacity-60"
+              className="whitespace-nowrap rounded-full font-sans text-sm font-semibold text-negative transition-colors hover:opacity-80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-negative disabled:cursor-not-allowed disabled:opacity-60"
             >
               {leavingGroup ? "Leaving…" : "Leave group"}
             </button>
@@ -86,18 +87,16 @@ export default function GroupHeader({ groupId, group, currentUserId, onGroupUpda
           {group.members.map((m) => (
             <span
               key={m.userId}
-              className="inline-flex items-center gap-1.5 rounded-full border border-line bg-paper px-3 py-1 font-mono text-xs text-ink/80"
+              className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface py-1 pl-1 pr-3 font-sans text-sm text-ink/80"
             >
-              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-ledger-green font-mono text-[10px] font-bold text-paper">
-                {m.name.charAt(0).toUpperCase()}
-              </span>
+              <Avatar name={m.name} size="sm" />
               {m.name}
             </span>
           ))}
           <button
             type="button"
             onClick={() => setShowMemberForm((s) => !s)}
-            className="rounded-sm font-mono text-xs font-bold text-ledger-green transition-colors hover:text-ledger-green-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ledger-green"
+            className="rounded-full font-sans text-sm font-semibold text-primary transition-colors hover:opacity-80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
           >
             {showMemberForm ? "Cancel" : "+ Add member"}
           </button>

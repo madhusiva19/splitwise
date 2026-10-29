@@ -88,7 +88,7 @@ export default function SettleTab({ groupId, settlements, currentUserId, onSettl
                 <Card>
                   <div className="flex items-center justify-between gap-3">
                     <p className="flex flex-wrap items-center gap-x-1.5 font-sans text-sm text-ink">
-                      <span className="font-mono font-bold">{s.fromUserName}</span>
+                      <span className="font-semibold">{s.fromUserName}</span>
                       <svg
                         viewBox="0 0 24 24"
                         fill="none"
@@ -96,12 +96,12 @@ export default function SettleTab({ groupId, settlements, currentUserId, onSettl
                         strokeWidth={2}
                         strokeLinecap="round"
                         strokeLinejoin="round"
-                        className="h-3.5 w-3.5 text-ink/40"
+                        className="h-3.5 w-3.5 text-ink-muted"
                         aria-hidden="true"
                       >
                         <path d="M5 12h14M13 6l6 6-6 6" />
                       </svg>
-                      <span className="font-mono font-bold">{s.toUserName}</span>
+                      <span className="font-semibold">{s.toUserName}</span>
                       <Money amount={s.amount} />
                     </p>
                     {canSettle && (
@@ -109,7 +109,7 @@ export default function SettleTab({ groupId, settlements, currentUserId, onSettl
                         type="button"
                         onClick={() => handleSettleUp(s)}
                         disabled={settlingKey === key}
-                        className="whitespace-nowrap rounded-sm font-mono text-xs font-bold text-ledger-green transition-colors hover:text-ledger-green-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ledger-green disabled:cursor-not-allowed disabled:opacity-60"
+                        className="whitespace-nowrap rounded-full font-sans text-sm font-semibold text-primary transition-colors hover:opacity-80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-60"
                       >
                         {settlingKey === key ? "Recording…" : "Mark as paid"}
                       </button>
@@ -119,7 +119,7 @@ export default function SettleTab({ groupId, settlements, currentUserId, onSettl
                         type="button"
                         onClick={() => handleSendReminder(s)}
                         disabled={remindingKey === key || alreadyReminded}
-                        className="whitespace-nowrap rounded-sm font-mono text-xs font-bold text-ink/60 transition-colors hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ledger-green disabled:cursor-not-allowed disabled:opacity-60"
+                        className="whitespace-nowrap rounded-full font-sans text-sm font-semibold text-ink-muted transition-colors hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-60"
                       >
                         {remindingKey === key ? "Sending…" : alreadyReminded ? "Reminded ✓" : "Send reminder"}
                       </button>

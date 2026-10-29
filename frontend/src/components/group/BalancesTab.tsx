@@ -52,24 +52,22 @@ export default function BalancesTab({ groupName, balances, currentUserId }: Bala
         <>
           {balanceSummary !== null && Math.abs(balanceSummary) > 0.004 && (
             <div
-              className={`mb-4 rounded-sm border px-4 py-3 ${
-                balanceSummary > 0
-                  ? "border-ledger-green/40 bg-ledger-green/10"
-                  : "border-debt/40 bg-debt/10"
+              className={`mb-4 rounded-2xl px-4 py-3.5 ${
+                balanceSummary > 0 ? "bg-positive/10" : "bg-negative/10"
               }`}
             >
               <p className="font-sans text-sm text-ink">
                 {balanceSummary > 0 ? (
                   <>
                     Overall, you&rsquo;re owed{" "}
-                    <span className="font-mono font-bold text-ledger-green">
+                    <span className="font-semibold text-positive">
                       {symbol}{balanceSummary.toFixed(2)}
                     </span>
                   </>
                 ) : (
                   <>
                     Overall, you owe{" "}
-                    <span className="font-mono font-bold text-debt">{symbol}{Math.abs(balanceSummary).toFixed(2)}</span>
+                    <span className="font-semibold text-negative">{symbol}{Math.abs(balanceSummary).toFixed(2)}</span>
                   </>
                 )}
               </p>
@@ -80,7 +78,7 @@ export default function BalancesTab({ groupName, balances, currentUserId }: Bala
             <button
               type="button"
               onClick={handleExportCsv}
-              className="rounded-sm font-mono text-sm font-bold text-ledger-green transition-colors hover:text-ledger-green-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ledger-green"
+              className="rounded-full font-sans text-sm font-semibold text-primary transition-colors hover:opacity-80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
             >
               Export CSV
             </button>
@@ -101,16 +99,16 @@ export default function BalancesTab({ groupName, balances, currentUserId }: Bala
                 <Card
                   className={`border-l-[3px] ${
                     isSettled
-                      ? "border-l-line"
+                      ? "border-l-border"
                       : b.netBalance > 0
-                      ? "border-l-ledger-green"
-                      : "border-l-debt"
+                      ? "border-l-positive"
+                      : "border-l-negative"
                   }`}
                 >
                   <div className="flex items-center justify-between gap-3">
                     <div>
                       <span className="block font-sans text-sm font-medium text-ink">{b.userName}</span>
-                      <span className="block font-mono text-[11px] uppercase tracking-wider text-ink/50">
+                      <span className="block font-sans text-xs text-ink-muted">
                         {isSettled ? "Settled up" : b.netBalance > 0 ? "Is owed" : "Owes"}
                       </span>
                     </div>

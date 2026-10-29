@@ -7,6 +7,7 @@ import EmptyState from "@/components/EmptyState";
 import { CardListSkeleton } from "@/components/Skeleton";
 import AddExpenseForm from "@/components/AddExpenseForm";
 import CategoryBreakdownChart from "@/components/CategoryBreakdownChart";
+import SpendingTrendInsights from "@/components/SpendingTrendInsights";
 import ExpenseItem from "@/components/group/ExpenseItem";
 import { useCurrency } from "@/lib/currency";
 import { GroupMember } from "@/lib/groups";
@@ -16,6 +17,7 @@ import {
   ExpenseResponse,
   ExpenseCategory,
   CategoryBreakdown,
+  SpendingTrendResponse,
 } from "@/lib/expenses";
 
 interface ExpensesTabProps {
@@ -23,6 +25,7 @@ interface ExpensesTabProps {
   members: GroupMember[];
   expenses: ExpenseResponse[] | null;
   categoryBreakdown: CategoryBreakdown[] | null;
+  spendingTrend: SpendingTrendResponse | null;
   currentUserId: string;
   onExpensesChanged: (expenses: ExpenseResponse[]) => void;
   onDerivedDataChanged: () => Promise<void>;
@@ -33,6 +36,7 @@ export default function ExpensesTab({
   members,
   expenses,
   categoryBreakdown,
+  spendingTrend,
   currentUserId,
   onExpensesChanged,
   onDerivedDataChanged,
@@ -99,12 +103,12 @@ export default function ExpensesTab({
     <div>
       <div className="mb-4 flex items-center justify-between gap-3">
         {expenses !== null && expenses.length > 0 && (
-          <p className="font-mono text-xs uppercase tracking-wider text-ink/60">
+          <p className="font-sans text-sm text-ink-muted">
             {expensesFiltered && filteredExpenses
               ? `${filteredExpenses.length} of ${expenses.length} expenses`
               : `${expenses.length} ${expenses.length === 1 ? "expense" : "expenses"}`}{" "}
             · Total{" "}
-            <span className="font-bold text-ink">
+            <span className="font-semibold text-ink">
               {symbol}{(filteredExpenses ?? expenses).reduce((sum, e) => sum + e.amount, 0).toFixed(2)}
             </span>
           </p>
@@ -115,7 +119,7 @@ export default function ExpensesTab({
             setEditingExpense(null);
             setShowExpenseForm((s) => !s);
           }}
-          className="ml-auto rounded-sm font-mono text-sm font-bold text-ledger-green transition-colors hover:text-ledger-green-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ledger-green"
+          className="ml-auto rounded-full font-sans text-sm font-semibold text-primary transition-colors hover:opacity-80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
         >
           {showExpenseForm ? "Cancel" : "+ Add expense"}
         </button>
@@ -150,6 +154,8 @@ export default function ExpensesTab({
         onCategoryClick={handleCategoryChartClick}
       />
 
+      <SpendingTrendInsights trend={spendingTrend} />
+
       {expenseActionError && <ErrorBanner className="mb-4" message={expenseActionError} />}
 
       {expenses !== null && expenses.length > 0 && (
@@ -162,13 +168,13 @@ export default function ExpensesTab({
               setVisibleExpenseCount(10);
             }}
             placeholder="Search expenses…"
-            className="min-w-0 flex-1 rounded-sm border border-line bg-transparent px-3 py-1.5 font-sans text-sm text-ink outline-none transition-colors focus:border-ledger-green"
+            className="min-w-0 flex-1 rounded-xl border border-transparent bg-surface-muted px-4 py-2 font-sans text-sm text-ink outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20"
           />
           {categoryFilter && (
             <button
               type="button"
               onClick={() => handleCategoryChartClick(categoryFilter)}
-              className="flex items-center gap-1.5 rounded-full border border-ledger-green bg-ledger-green/10 px-3 py-1 font-mono text-xs text-ledger-green transition-colors hover:bg-ledger-green/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ledger-green"
+              className="flex items-center gap-1.5 rounded-full bg-primary-soft px-3 py-1.5 font-sans text-xs font-semibold text-primary transition-colors hover:opacity-80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
             >
               {formatCategory(categoryFilter)}
               <span aria-hidden="true">×</span>
@@ -218,7 +224,7 @@ export default function ExpensesTab({
               <button
                 type="button"
                 onClick={() => setVisibleExpenseCount((c) => c + 10)}
-                className="rounded-sm border border-line px-4 py-2 font-mono text-xs font-bold uppercase tracking-wider text-ink/70 transition-colors hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ledger-green"
+                className="rounded-full border border-border px-4 py-2 font-sans text-sm font-semibold text-ink-muted transition-colors hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
               >
                 Show more ({filteredExpenses!.length - visibleExpenseCount} more)
               </button>

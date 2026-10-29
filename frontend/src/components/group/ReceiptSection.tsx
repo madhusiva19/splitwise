@@ -69,7 +69,7 @@ export default function ReceiptSection({ groupId, expenseId, hasReceipt, onChang
   }
 
   return (
-    <div className="mt-3 border-t border-line pt-3">
+    <div className="mt-3 border-t border-border pt-3">
       <input
         ref={fileInputRef}
         type="file"
@@ -83,7 +83,7 @@ export default function ReceiptSection({ groupId, expenseId, hasReceipt, onChang
             type="button"
             onClick={handleViewToggle}
             disabled={loadingPreview}
-            className="rounded-sm font-mono text-xs font-bold text-ledger-green transition-colors hover:text-ledger-green-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ledger-green disabled:cursor-not-allowed disabled:opacity-60"
+            className="rounded-full font-sans text-sm font-semibold text-primary transition-colors hover:opacity-80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-60"
           >
             {loadingPreview ? "Loading…" : previewUrl ? "Hide receipt" : "View receipt"}
           </button>
@@ -92,7 +92,7 @@ export default function ReceiptSection({ groupId, expenseId, hasReceipt, onChang
           type="button"
           onClick={() => fileInputRef.current?.click()}
           disabled={uploading}
-          className="rounded-sm font-mono text-xs font-bold text-ledger-green transition-colors hover:text-ledger-green-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ledger-green disabled:cursor-not-allowed disabled:opacity-60"
+          className="rounded-full font-sans text-sm font-semibold text-primary transition-colors hover:opacity-80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-60"
         >
           {uploading ? "Uploading…" : hasReceipt ? "Replace receipt" : "+ Add receipt"}
         </button>
@@ -100,7 +100,7 @@ export default function ReceiptSection({ groupId, expenseId, hasReceipt, onChang
           <button
             type="button"
             onClick={handleRemove}
-            className="rounded-sm font-mono text-xs font-bold text-debt transition-colors hover:text-debt/80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-debt"
+            className="rounded-full font-sans text-sm font-semibold text-negative transition-colors hover:opacity-80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-negative"
           >
             Remove
           </button>
@@ -109,7 +109,7 @@ export default function ReceiptSection({ groupId, expenseId, hasReceipt, onChang
       {error && <ErrorBanner className="mt-2" message={error} />}
       {previewUrl && (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={previewUrl} alt="Receipt" className="mt-3 max-h-80 rounded-sm border border-line" />
+        <img src={previewUrl} alt="Receipt" className="mt-3 max-h-80 rounded-xl border border-border" />
       )}
     </div>
   );

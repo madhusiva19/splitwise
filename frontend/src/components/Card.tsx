@@ -6,10 +6,9 @@ interface CardProps {
 export default function Card({ children, className }: CardProps) {
   return (
     <div
-      className={`overflow-hidden rounded-sm border border-line bg-paper shadow-sm ${className ?? ""}`}
+      className={`overflow-hidden rounded-2xl border border-border bg-surface p-6 shadow-card dark:shadow-card-dark ${className ?? ""}`}
     >
-      <div className="perforated-top" aria-hidden="true" />
-      <div className="px-6 pb-6 pt-2">{children}</div>
+      {children}
     </div>
   );
 }

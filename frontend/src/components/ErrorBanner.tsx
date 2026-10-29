@@ -7,7 +7,7 @@ export default function ErrorBanner({ message, className }: ErrorBannerProps) {
   return (
     <div
       role="alert"
-      className={`flex items-start gap-2 rounded-sm border border-debt/40 bg-debt/10 px-3 py-2.5 font-sans text-sm text-debt ${className ?? ""}`}
+      className={`flex items-start gap-2 rounded-xl border border-negative/30 bg-negative/10 px-3.5 py-2.5 font-sans text-sm text-negative ${className ?? ""}`}
     >
       <svg
         viewBox="0 0 24 24"

@@ -52,12 +52,12 @@ function RecurringExpenseItem({
       <div className="flex items-start justify-between gap-3">
         <div>
           <div className="flex items-center gap-2">
-            <p className="font-mono text-base font-bold text-ink">{template.description}</p>
-            <span className="rounded-full border border-line px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider text-ink/60">
+            <p className="font-sans text-base font-semibold text-ink">{template.description}</p>
+            <span className="rounded-full bg-surface-muted px-2.5 py-0.5 font-sans text-xs text-ink-muted">
               {formatCategory(template.category)}
             </span>
           </div>
-          <p className="font-mono text-xs uppercase tracking-wider text-ink/60">
+          <p className="font-sans text-xs text-ink-muted">
             {formatFrequency(template.frequency)} · Next: {formatNextRunAt(template.nextRunAt)}
           </p>
         </div>
@@ -68,7 +68,7 @@ function RecurringExpenseItem({
               type="button"
               onClick={handleDeactivate}
               disabled={deactivating}
-              className="rounded-full border border-debt px-3 py-1 font-mono text-xs text-debt transition-colors hover:bg-debt hover:text-paper focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-debt disabled:cursor-not-allowed disabled:opacity-60"
+              className="rounded-full border border-negative px-3 py-1 font-sans text-xs font-semibold text-negative transition-colors hover:bg-negative hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-negative disabled:cursor-not-allowed disabled:opacity-60"
             >
               {deactivating ? "…" : "Cancel"}
             </button>

@@ -13,7 +13,7 @@ export default function Money({ amount, showSign }: MoneyProps) {
   const sign = isNegative ? "-" : showSign ? "+" : "";
 
   return (
-    <span className={`font-mono tabular-nums ${isNegative ? "text-debt" : "text-ledger-green"}`}>
+    <span className={`font-sans font-semibold tabular-nums ${isNegative ? "text-negative" : "text-positive"}`}>
       {sign}{symbol}{Math.abs(amount).toFixed(2)}
     </span>
   );

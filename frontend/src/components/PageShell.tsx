@@ -11,7 +11,7 @@ export default function PageShell({ children, wide }: PageShellProps) {
   return (
     <>
       <NavBar />
-      <main className="min-h-screen bg-paper px-4 py-8 sm:py-10">
+      <main className="min-h-screen bg-bg px-4 py-8 sm:py-10">
         <div className={`mx-auto ${wide ? "max-w-3xl" : "max-w-2xl"}`}>{children}</div>
       </main>
     </>

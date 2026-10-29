@@ -27,9 +27,7 @@ export default function Field({
 }: FieldProps) {
   return (
     <label className="block">
-      <span className="block font-mono text-xs uppercase tracking-wider text-ink/70">
-        {label}
-      </span>
+      <span className="block font-sans text-sm font-medium text-ink-muted">{label}</span>
       <input
         type={type}
         value={value}
@@ -40,11 +38,13 @@ export default function Field({
         minLength={minLength}
         autoComplete={autoComplete}
         aria-invalid={!!error}
-        className={`mt-1 w-full border-0 border-b bg-transparent py-1.5 font-sans text-ink outline-none transition-colors focus:ring-0 ${
-          error ? "border-debt focus:border-debt" : "border-line focus:border-ledger-green"
+        className={`mt-1.5 w-full rounded-xl border bg-surface-muted px-4 py-2.5 font-sans text-ink outline-none transition-colors focus:ring-2 focus:ring-offset-0 ${
+          error
+            ? "border-negative focus:border-negative focus:ring-negative/20"
+            : "border-transparent focus:border-primary focus:ring-primary/20"
         }`}
       />
-      {error && <span className="mt-1 block font-mono text-xs text-debt">{error}</span>}
+      {error && <span className="mt-1.5 block font-sans text-xs text-negative">{error}</span>}
     </label>
   );
 }

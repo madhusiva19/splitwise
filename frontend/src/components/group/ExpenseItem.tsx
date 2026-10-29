@@ -28,12 +28,12 @@ export default function ExpenseItem({
   const [expanded, setExpanded] = useState(false);
 
   return (
-    <Card className="transition-shadow hover:shadow-md">
+    <Card className="transition-shadow hover:shadow-lg">
       <button
         type="button"
         onClick={() => setExpanded((e) => !e)}
         aria-expanded={expanded}
-        className="-m-2 flex w-full items-center justify-between gap-3 rounded-sm p-2 text-left transition-colors hover:bg-line/10 focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ledger-green"
+        className="-m-2 flex w-full items-center justify-between gap-3 rounded-xl p-2 text-left transition-colors hover:bg-surface-muted focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary"
       >
         <svg
           viewBox="0 0 24 24"
@@ -42,15 +42,15 @@ export default function ExpenseItem({
           strokeWidth={2}
           strokeLinecap="round"
           strokeLinejoin="round"
-          className={`h-3.5 w-3.5 shrink-0 text-ink/40 transition-transform ${expanded ? "rotate-90" : ""}`}
+          className={`h-3.5 w-3.5 shrink-0 text-ink-muted transition-transform ${expanded ? "rotate-90" : ""}`}
           aria-hidden="true"
         >
           <path d="M9 18l6-6-6-6" />
         </svg>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <p className="truncate font-mono text-base font-bold text-ink">{expense.description}</p>
-            <span className="shrink-0 rounded-full border border-line px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider text-ink/60">
+            <p className="truncate font-sans text-base font-semibold text-ink">{expense.description}</p>
+            <span className="shrink-0 rounded-full bg-surface-muted px-2.5 py-0.5 font-sans text-xs text-ink-muted">
               {formatCategory(expense.category)}
             </span>
             {expense.hasReceipt && (
@@ -61,7 +61,7 @@ export default function ExpenseItem({
                 strokeWidth={2}
                 strokeLinecap="round"
                 strokeLinejoin="round"
-                className="h-3.5 w-3.5 shrink-0 text-ink/40"
+                className="h-3.5 w-3.5 shrink-0 text-ink-muted"
                 aria-label="Has a receipt"
               >
                 <title>Has a receipt</title>
@@ -69,7 +69,7 @@ export default function ExpenseItem({
               </svg>
             )}
           </div>
-          <p className="truncate font-mono text-xs uppercase tracking-wider text-ink/60">
+          <p className="truncate font-sans text-xs text-ink-muted">
             Paid by {expense.paidByName} · {new Date(expense.createdAt).toLocaleDateString()}
           </p>
         </div>
@@ -77,7 +77,7 @@ export default function ExpenseItem({
       </button>
 
       {expanded && (
-        <div className="stitch-divider mt-3 pt-3">
+        <div className="mt-3 border-t border-border pt-3">
           <ul className="space-y-1.5">
             {expense.shares.map((share) => (
               <li key={share.userId} className="flex items-center justify-between font-sans text-sm text-ink">
@@ -93,7 +93,7 @@ export default function ExpenseItem({
                 type="button"
                 onClick={onEdit}
                 aria-label={`Edit "${expense.description}"`}
-                className="rounded-sm font-mono text-xs font-bold text-ledger-green transition-colors hover:text-ledger-green-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ledger-green"
+                className="rounded-full font-sans text-sm font-semibold text-primary transition-colors hover:opacity-80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
               >
                 Edit
               </button>
@@ -102,7 +102,7 @@ export default function ExpenseItem({
                 onClick={onDelete}
                 disabled={deleting}
                 aria-label={`Delete "${expense.description}"`}
-                className="rounded-sm font-mono text-xs font-bold text-debt transition-colors hover:text-debt/80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-debt disabled:cursor-not-allowed disabled:opacity-60"
+                className="rounded-full font-sans text-sm font-semibold text-negative transition-colors hover:opacity-80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-negative disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {deleting ? "Deleting…" : "Delete"}
               </button>

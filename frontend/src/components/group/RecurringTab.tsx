@@ -33,7 +33,7 @@ export default function RecurringTab({
         <button
           type="button"
           onClick={() => setShowRecurringForm((s) => !s)}
-          className="rounded-sm font-mono text-sm font-bold text-ledger-green transition-colors hover:text-ledger-green-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ledger-green"
+          className="rounded-full font-sans text-sm font-semibold text-primary transition-colors hover:opacity-80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
         >
           {showRecurringForm ? "Cancel" : "+ New recurring expense"}
         </button>

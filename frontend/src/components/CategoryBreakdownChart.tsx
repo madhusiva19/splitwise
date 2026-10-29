@@ -6,25 +6,13 @@ import { Skeleton } from "@/components/Skeleton";
 import { useCurrency } from "@/lib/currency";
 import { CategoryBreakdown, ExpenseCategory, formatCategory } from "@/lib/expenses";
 import { useTheme } from "@/lib/useTheme";
+import { CATEGORY_COLORS, CHART_THEME } from "@/lib/chartTheme";
 
 interface CategoryBreakdownChartProps {
   breakdown: CategoryBreakdown[] | null;
   activeCategory?: ExpenseCategory | null;
   onCategoryClick?: (category: ExpenseCategory) => void;
 }
-
-// Shades and tints of the ledger palette (ledger.green / debt) so the chart reads as part
-// of the same paper-and-ink theme instead of library defaults. Recharts renders raw SVG,
-// so these can't be Tailwind classes — each mode needs its own literal hex values.
-const CATEGORY_COLORS = {
-  light: ["#2F6F4E", "#B3492F", "#4C8B6C", "#C97A5F", "#1A3A29", "#8F3A25", "#6FA98D", "#DDA48D"],
-  dark: ["#4FAE7C", "#E07856", "#7BC49B", "#EDA588", "#2E6B4C", "#B8583A", "#9BD3B6", "#F2C0AA"],
-};
-
-const CHART_THEME = {
-  light: { axisLine: "#D8D0BC", tick: "#22261F", tooltipBg: "#FAF6EE", tooltipBorder: "#D8D0BC" },
-  dark: { axisLine: "#3A362E", tick: "#EDE8DC", tooltipBg: "#1A1815", tooltipBorder: "#3A362E" },
-};
 
 export default function CategoryBreakdownChart({ breakdown, activeCategory, onCategoryClick }: CategoryBreakdownChartProps) {
   const { theme } = useTheme();
@@ -60,10 +48,10 @@ export default function CategoryBreakdownChart({ breakdown, activeCategory, onCa
   return (
     <Card className="mb-6">
       <div className="mb-4 flex items-center justify-between gap-2">
-        <h2 className="font-mono text-sm font-bold uppercase tracking-wider text-ink">
+        <h2 className="font-sans text-sm font-semibold text-ink">
           Spending by category
         </h2>
-        {clickable && <span className="font-mono text-[10px] uppercase tracking-wider text-ink/40">Click a bar to filter</span>}
+        {clickable && <span className="font-sans text-xs text-ink-muted">Click a bar to filter</span>}
       </div>
       <div style={{ width: "100%", height: Math.max(data.length * 40, 120) }}>
         <ResponsiveContainer>
@@ -75,15 +63,15 @@ export default function CategoryBreakdownChart({ breakdown, activeCategory, onCa
               width={100}
               tickLine={false}
               axisLine={{ stroke: chartTheme.axisLine }}
-              tick={{ fill: chartTheme.tick, fontSize: 12, fontFamily: "var(--font-space-mono), monospace" }}
+              tick={{ fill: chartTheme.tick, fontSize: 12, fontFamily: "var(--font-inter), sans-serif" }}
             />
             <Tooltip
               cursor={{ fill: chartTheme.axisLine, opacity: 0.3 }}
               contentStyle={{
                 background: chartTheme.tooltipBg,
                 border: `1px solid ${chartTheme.tooltipBorder}`,
-                borderRadius: 2,
-                fontFamily: "var(--font-space-mono), monospace",
+                borderRadius: 12,
+                fontFamily: "var(--font-inter), sans-serif",
                 fontSize: 12,
                 color: chartTheme.tick,
               }}
@@ -95,7 +83,7 @@ export default function CategoryBreakdownChart({ breakdown, activeCategory, onCa
             />
             <Bar
               dataKey="totalAmount"
-              radius={[0, 2, 2, 0]}
+              radius={[0, 8, 8, 0]}
               barSize={18}
               onClick={(entry: unknown) => onCategoryClick?.((entry as { category: ExpenseCategory }).category)}
               style={{ cursor: clickable ? "pointer" : "default" }}

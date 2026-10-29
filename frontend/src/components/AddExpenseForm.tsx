@@ -3,6 +3,7 @@
 import { useMemo, useState, FormEvent } from "react";
 import Field from "@/components/Field";
 import ErrorBanner from "@/components/ErrorBanner";
+import Button from "@/components/Button";
 import SegmentedControl from "@/components/SegmentedControl";
 import ItemizedExpenseEntry from "@/components/ItemizedExpenseEntry";
 import { useCurrency } from "@/lib/currency";
@@ -148,8 +149,8 @@ export default function AddExpenseForm({ groupId, members, expense, onSaved, onC
         <div className="sm:w-32">
           {isItemized ? (
             <div>
-              <span className="block font-mono text-xs uppercase tracking-wider text-ink/70">Amount</span>
-              <p className="mt-1 py-1.5 font-mono text-ink">
+              <span className="block font-sans text-sm font-medium text-ink-muted">Amount</span>
+              <p className="mt-1.5 py-2.5 font-sans font-semibold text-ink">
                 {itemizedResult ? `${symbol}${itemizedResult.amount.toFixed(2)}` : "—"}
               </p>
             </div>
@@ -170,7 +171,7 @@ export default function AddExpenseForm({ groupId, members, expense, onSaved, onC
 
       {isEditing && (
         <div>
-          <span className="mb-2 block font-mono text-xs uppercase tracking-wider text-ink/70">
+          <span className="mb-2 block font-sans text-sm font-medium text-ink-muted">
             Paid by
           </span>
           <div className="flex flex-wrap gap-2">
@@ -182,10 +183,10 @@ export default function AddExpenseForm({ groupId, members, expense, onSaved, onC
                   type="button"
                   onClick={() => setPaidByUserId(member.userId)}
                   aria-pressed={selected}
-                  className={`rounded-full border px-3 py-1 font-mono text-xs transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ledger-green ${
+                  className={`rounded-full px-3.5 py-1.5 font-sans text-sm font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
                     selected
-                      ? "border-ledger-green bg-ledger-green text-paper"
-                      : "border-line text-ink/60 hover:text-ink"
+                      ? "bg-primary text-white"
+                      : "bg-surface-muted text-ink-muted hover:text-ink"
                   }`}
                 >
                   {member.name}
@@ -204,8 +205,8 @@ export default function AddExpenseForm({ groupId, members, expense, onSaved, onC
       />
 
       <div>
-        <span className="mb-2 block font-mono text-xs uppercase tracking-wider text-ink/70">
-          Category <span className="normal-case text-ink/40">(optional)</span>
+        <span className="mb-2 block font-sans text-sm font-medium text-ink-muted">
+          Category <span className="text-ink-muted/60">(optional)</span>
         </span>
         <div className="flex flex-wrap gap-2">
           {EXPENSE_CATEGORIES.map((c) => {
@@ -216,10 +217,10 @@ export default function AddExpenseForm({ groupId, members, expense, onSaved, onC
                 type="button"
                 onClick={() => setCategory(selected ? undefined : c)}
                 aria-pressed={selected}
-                className={`rounded-full border px-3 py-1 font-mono text-xs transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ledger-green ${
+                className={`rounded-full px-3.5 py-1.5 font-sans text-sm font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
                   selected
-                    ? "border-ledger-green bg-ledger-green text-paper"
-                    : "border-line text-ink/60 hover:text-ink"
+                    ? "bg-primary text-white"
+                    : "bg-surface-muted text-ink-muted hover:text-ink"
                 }`}
               >
                 {formatCategory(c)}
@@ -232,8 +233,8 @@ export default function AddExpenseForm({ groupId, members, expense, onSaved, onC
       {isItemized ? (
         <ItemizedExpenseEntry members={members} onChange={setItemizedResult} />
       ) : (
-      <div className="rounded-sm border border-line px-4 py-3">
-        <span className="mb-2 block font-mono text-xs uppercase tracking-wider text-ink/70">
+      <div className="rounded-2xl border border-border px-4 py-3.5">
+        <span className="mb-2 block font-sans text-sm font-medium text-ink-muted">
           Participants
         </span>
         <div className="space-y-2">
@@ -246,7 +247,7 @@ export default function AddExpenseForm({ groupId, members, expense, onSaved, onC
                     type="checkbox"
                     checked={checked}
                     onChange={() => toggleParticipant(member.userId)}
-                    className="h-4 w-4 rounded-sm border-line text-ledger-green focus:ring-ledger-green"
+                    className="h-4 w-4 rounded border-border text-primary focus:ring-primary"
                   />
                   {member.name}
                 </label>
@@ -259,11 +260,11 @@ export default function AddExpenseForm({ groupId, members, expense, onSaved, onC
                       setShareInputs((prev) => ({ ...prev, [member.userId]: e.target.value }))
                     }
                     placeholder={splitType === "PERCENTAGE" ? "%" : "0.00"}
-                    className="w-24 border-0 border-b border-line bg-transparent py-1 text-right font-sans text-sm text-ink outline-none focus:border-ledger-green focus:ring-0"
+                    className="w-24 rounded-lg border border-transparent bg-surface-muted px-2 py-1 text-right font-sans text-sm text-ink outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
                   />
                 )}
                 {!needsShares && checked && Number.isFinite(parsedAmount) && parsedAmount > 0 && participantIds.length > 0 && (
-                  <span className="font-mono text-xs tabular-nums text-ink/50">
+                  <span className="font-sans text-xs tabular-nums text-ink-muted">
                     {symbol}{(parsedAmount / participantIds.length).toFixed(2)}
                   </span>
                 )}
@@ -272,7 +273,7 @@ export default function AddExpenseForm({ groupId, members, expense, onSaved, onC
           })}
         </div>
         {needsShares && (
-          <p className={`mt-3 border-t border-line pt-2 font-mono text-xs ${sharesValid ? "text-ink/60" : "text-debt"}`}>
+          <p className={`mt-3 border-t border-border pt-2 font-sans text-xs ${sharesValid ? "text-ink-muted" : "text-negative"}`}>
             {splitType === "PERCENTAGE"
               ? `Total: ${shareSum.toFixed(2)}% (must equal 100%)`
               : `Total: ${symbol}${shareSum.toFixed(2)} (must equal ${symbol}${
@@ -286,20 +287,12 @@ export default function AddExpenseForm({ groupId, members, expense, onSaved, onC
       {error && <ErrorBanner message={error} />}
 
       <div className="flex gap-3">
-        <button
-          type="submit"
-          disabled={!canSubmit || saving}
-          className="flex-1 rounded-sm bg-ledger-green py-2.5 font-mono text-sm font-bold uppercase tracking-wider text-paper transition-colors hover:bg-ledger-green-dark active:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ledger-green disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          {saving ? "Saving…" : isEditing ? "Save changes" : "Add expense"}
-        </button>
-        <button
-          type="button"
-          onClick={onCancel}
-          className="rounded-sm border border-line px-4 py-2.5 font-mono text-sm font-bold uppercase tracking-wider text-ink/70 transition-colors hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ledger-green"
-        >
+        <Button type="submit" fullWidth disabled={!canSubmit} loading={saving} loadingLabel="Saving…">
+          {isEditing ? "Save changes" : "Add expense"}
+        </Button>
+        <Button type="button" variant="ghost" onClick={onCancel}>
           Cancel
-        </button>
+        </Button>
       </div>
     </form>
   );

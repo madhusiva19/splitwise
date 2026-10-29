@@ -8,6 +8,7 @@ import Field from "@/components/Field";
 import PageShell from "@/components/PageShell";
 import EmptyState from "@/components/EmptyState";
 import ErrorBanner from "@/components/ErrorBanner";
+import Button from "@/components/Button";
 import { CardListSkeleton } from "@/components/Skeleton";
 import { SUPPORTED_CURRENCIES } from "@/lib/currency";
 import { createGroup, listGroups, GroupSummaryResponse } from "@/lib/groups";
@@ -68,18 +69,18 @@ export default function HomePage() {
   return (
     <PageShell>
       <header className="mb-8">
-        <p className="font-mono text-xs uppercase tracking-widest text-ink/60">Welcome back</p>
-        <h1 className="font-mono text-2xl font-bold text-ink sm:text-3xl">{name}</h1>
+        <p className="font-sans text-sm text-ink-muted">Welcome back</p>
+        <h1 className="font-sans text-2xl font-extrabold text-ink sm:text-3xl">{name}</h1>
       </header>
 
       <div className="mb-4 flex items-center justify-between gap-3">
-        <h2 className="font-mono text-sm font-bold uppercase tracking-wider text-ink">
+        <h2 className="font-sans text-sm font-semibold text-ink">
           Your Groups
         </h2>
         <button
           type="button"
           onClick={() => setShowForm((s) => !s)}
-          className="rounded-sm font-mono text-sm font-bold text-ledger-green transition-colors hover:text-ledger-green-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ledger-green"
+          className="rounded-full font-sans text-sm font-semibold text-primary transition-colors hover:opacity-80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
         >
           {showForm ? "Cancel" : "+ New Group"}
         </button>
@@ -98,11 +99,11 @@ export default function HomePage() {
             />
 
             <label className="block">
-              <span className="block font-mono text-xs uppercase tracking-wider text-ink/70">Currency</span>
+              <span className="block font-sans text-sm font-medium text-ink-muted">Currency</span>
               <select
                 value={groupCurrency}
                 onChange={(e) => setGroupCurrency(e.target.value)}
-                className="mt-1 w-full border-0 border-b border-line bg-transparent py-1.5 font-sans text-ink outline-none transition-colors focus:border-ledger-green focus:ring-0"
+                className="mt-1.5 w-full rounded-xl border border-transparent bg-surface-muted px-4 py-2.5 font-sans text-ink outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/20"
               >
                 {SUPPORTED_CURRENCIES.map((c) => (
                   <option key={c.code} value={c.code}>
@@ -114,13 +115,9 @@ export default function HomePage() {
 
             {createError && <ErrorBanner message={createError} />}
 
-            <button
-              type="submit"
-              disabled={creating}
-              className="w-full rounded-sm bg-ledger-green py-2.5 font-mono text-sm font-bold uppercase tracking-wider text-paper transition-colors hover:bg-ledger-green-dark active:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ledger-green disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {creating ? "Saving…" : "Create group"}
-            </button>
+            <Button type="submit" fullWidth loading={creating} loadingLabel="Saving…">
+              Create group
+            </Button>
           </form>
         </Card>
       )}
@@ -156,12 +153,12 @@ export default function HomePage() {
             <li key={group.id}>
               <Link
                 href={`/groups/${group.id}`}
-                className="block rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ledger-green"
+                className="block rounded-2xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
               >
-                <Card className="transition-all hover:border-ledger-green hover:shadow-md">
+                <Card className="transition-all hover:border-primary/40">
                   <div className="flex items-center justify-between gap-3">
-                    <span className="truncate font-mono text-base font-bold text-ink">{group.name}</span>
-                    <span className="shrink-0 font-mono text-xs uppercase tracking-wider text-ink/60">
+                    <span className="truncate font-sans text-base font-semibold text-ink">{group.name}</span>
+                    <span className="shrink-0 font-sans text-xs text-ink-muted">
                       {group.memberCount} {group.memberCount === 1 ? "member" : "members"} · {group.currency}
                     </span>
                   </div>

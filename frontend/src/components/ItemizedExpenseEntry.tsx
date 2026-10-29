@@ -61,19 +61,19 @@ export default function ItemizedExpenseEntry({ members, onChange }: ItemizedExpe
   const extraAmount = parseFloat(extra) || 0;
 
   return (
-    <div className="space-y-4 rounded-sm border border-line px-4 py-3">
-      <span className="block font-mono text-xs uppercase tracking-wider text-ink/70">Line items</span>
+    <div className="space-y-4 rounded-2xl border border-border px-4 py-3.5">
+      <span className="block font-sans text-sm font-medium text-ink-muted">Line items</span>
 
       <div className="space-y-3">
         {items.map((item, index) => (
-          <div key={item.id} className="space-y-2 border-b border-line/60 pb-3 last:border-b-0 last:pb-0">
+          <div key={item.id} className="space-y-2 border-b border-border pb-3 last:border-b-0 last:pb-0">
             <div className="flex items-center gap-2">
               <input
                 type="text"
                 value={item.label}
                 onChange={(e) => updateItem(item.id, { label: e.target.value })}
                 placeholder={`Item ${index + 1}`}
-                className="min-w-0 flex-1 border-0 border-b border-line bg-transparent py-1 font-sans text-sm text-ink outline-none focus:border-ledger-green focus:ring-0"
+                className="min-w-0 flex-1 rounded-lg border border-transparent bg-surface-muted px-2.5 py-1.5 font-sans text-sm text-ink outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
               />
               <input
                 type="number"
@@ -81,14 +81,14 @@ export default function ItemizedExpenseEntry({ members, onChange }: ItemizedExpe
                 value={item.price}
                 onChange={(e) => updateItem(item.id, { price: e.target.value })}
                 placeholder="0.00"
-                className="w-24 border-0 border-b border-line bg-transparent py-1 text-right font-sans text-sm text-ink outline-none focus:border-ledger-green focus:ring-0"
+                className="w-24 rounded-lg border border-transparent bg-surface-muted px-2.5 py-1.5 text-right font-sans text-sm text-ink outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
               />
               {items.length > 1 && (
                 <button
                   type="button"
                   onClick={() => removeItem(item.id)}
                   aria-label={`Remove ${item.label || `item ${index + 1}`}`}
-                  className="shrink-0 rounded-sm font-mono text-xs text-ink/40 transition-colors hover:text-debt focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ledger-green"
+                  className="shrink-0 rounded-full font-sans text-xs text-ink-muted transition-colors hover:text-negative focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                 >
                   ✕
                 </button>
@@ -103,10 +103,10 @@ export default function ItemizedExpenseEntry({ members, onChange }: ItemizedExpe
                     type="button"
                     onClick={() => toggleAssignee(item.id, member.userId)}
                     aria-pressed={selected}
-                    className={`rounded-full border px-2.5 py-0.5 font-mono text-[11px] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ledger-green ${
+                    className={`rounded-full px-2.5 py-0.5 font-sans text-xs transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
                       selected
-                        ? "border-ledger-green bg-ledger-green text-paper"
-                        : "border-line text-ink/60 hover:text-ink"
+                        ? "bg-primary text-white"
+                        : "bg-surface-muted text-ink-muted hover:text-ink"
                     }`}
                   >
                     {member.name}
@@ -121,14 +121,14 @@ export default function ItemizedExpenseEntry({ members, onChange }: ItemizedExpe
       <button
         type="button"
         onClick={() => setItems((prev) => [...prev, newItem()])}
-        className="font-mono text-xs font-bold text-ledger-green transition-colors hover:text-ledger-green-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ledger-green"
+        className="rounded-full font-sans text-sm font-semibold text-primary transition-colors hover:opacity-80 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
       >
         + Add item
       </button>
 
       <label className="block">
-        <span className="block font-mono text-xs uppercase tracking-wider text-ink/70">
-          Tax / tip / extra <span className="normal-case text-ink/40">(optional, split proportionally)</span>
+        <span className="block font-sans text-sm font-medium text-ink-muted">
+          Tax / tip / extra <span className="text-ink-muted/60">(optional, split proportionally)</span>
         </span>
         <input
           type="number"
@@ -136,21 +136,21 @@ export default function ItemizedExpenseEntry({ members, onChange }: ItemizedExpe
           value={extra}
           onChange={(e) => setExtra(e.target.value)}
           placeholder="0.00"
-          className="mt-1 w-32 border-0 border-b border-line bg-transparent py-1.5 font-sans text-sm text-ink outline-none focus:border-ledger-green focus:ring-0"
+          className="mt-1.5 w-32 rounded-lg border border-transparent bg-surface-muted px-2.5 py-1.5 font-sans text-sm text-ink outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
         />
       </label>
 
-      <div className="border-t border-line pt-3">
+      <div className="border-t border-border pt-3">
         {result === null ? (
-          <p className="font-mono text-xs text-ink/50">
+          <p className="font-sans text-xs text-ink-muted">
             Add at least one priced item with someone assigned to it.
           </p>
         ) : (
           <>
-            <p className="font-mono text-xs text-ink/60">
+            <p className="font-sans text-xs text-ink-muted">
               Subtotal {symbol}{itemsSubtotal.toFixed(2)}
               {extraAmount > 0 ? ` + ${symbol}${extraAmount.toFixed(2)} extra` : ""} ={" "}
-              <span className="font-bold text-ink">Total {symbol}{result.amount.toFixed(2)}</span>
+              <span className="font-semibold text-ink">Total {symbol}{result.amount.toFixed(2)}</span>
             </p>
             <ul className="mt-2 space-y-1">
               {result.shares.map((s) => {
@@ -158,7 +158,7 @@ export default function ItemizedExpenseEntry({ members, onChange }: ItemizedExpe
                 return (
                   <li key={s.userId} className="flex items-center justify-between font-sans text-sm text-ink">
                     <span>{member?.name ?? "Unknown"}</span>
-                    <span className="font-mono tabular-nums">{symbol}{s.amount.toFixed(2)}</span>
+                    <span className="tabular-nums">{symbol}{s.amount.toFixed(2)}</span>
                   </li>
                 );
               })}

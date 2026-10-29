@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import AuthCard from "@/components/AuthCard";
 import Field from "@/components/Field";
 import ErrorBanner from "@/components/ErrorBanner";
+import Button from "@/components/Button";
 import { apiFetch } from "@/lib/api";
 import { storeAuth, AuthResponse } from "@/lib/auth";
 
@@ -57,13 +58,9 @@ export default function LoginPage() {
 
         {error && <ErrorBanner message={error} />}
 
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full rounded-sm bg-ledger-green py-2.5 font-mono text-sm font-bold uppercase tracking-wider text-paper transition-colors hover:bg-ledger-green-dark active:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ledger-green disabled:cursor-not-allowed disabled:opacity-60"
-        >
-          {loading ? "Logging in…" : "Log in"}
-        </button>
+        <Button type="submit" fullWidth loading={loading} loadingLabel="Logging in…">
+          Log in
+        </Button>
       </form>
     </AuthCard>
   );

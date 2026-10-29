@@ -19,10 +19,12 @@ import {
   getBalances,
   getSettlementSuggestions,
   getCategoryBreakdown,
+  getSpendingTrend,
   ExpenseResponse,
   BalanceResponse,
   SettlementSuggestion,
   CategoryBreakdown,
+  SpendingTrendResponse,
 } from "@/lib/expenses";
 import {
   listRecurringExpenses,
@@ -42,6 +44,7 @@ export default function GroupDetailPage() {
   const [balances, setBalances] = useState<BalanceResponse[] | null>(null);
   const [settlements, setSettlements] = useState<SettlementSuggestion[] | null>(null);
   const [categoryBreakdown, setCategoryBreakdown] = useState<CategoryBreakdown[] | null>(null);
+  const [spendingTrend, setSpendingTrend] = useState<SpendingTrendResponse | null>(null);
   const [recurringExpenses, setRecurringExpenses] = useState<RecurringExpenseResponse[] | null>(null);
   const [activity, setActivity] = useState<ActivityItem[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -61,12 +64,13 @@ export default function GroupDetailPage() {
 
   async function loadAll() {
     try {
-      const [g, e, b, s, c, r, a] = await Promise.all([
+      const [g, e, b, s, c, t, r, a] = await Promise.all([
         getGroup(groupId),
         listExpenses(groupId),
         getBalances(groupId),
         getSettlementSuggestions(groupId),
         getCategoryBreakdown(groupId),
+        getSpendingTrend(groupId),
         listRecurringExpenses(groupId),
         getGroupActivity(groupId),
       ]);
@@ -75,6 +79,7 @@ export default function GroupDetailPage() {
       setBalances(b);
       setSettlements(s);
       setCategoryBreakdown(c);
+      setSpendingTrend(t);
       setRecurringExpenses(r);
       setActivity(a);
     } catch (err) {
@@ -85,15 +90,17 @@ export default function GroupDetailPage() {
   // Shared by ExpensesTab (after add/edit/delete) — everything derived from expenses needs
   // to be refetched together so the balances/settlements/category chart update in lockstep.
   async function refreshAfterExpenseChange() {
-    const [b, s, c, a] = await Promise.all([
+    const [b, s, c, t, a] = await Promise.all([
       getBalances(groupId),
       getSettlementSuggestions(groupId),
       getCategoryBreakdown(groupId),
+      getSpendingTrend(groupId),
       getGroupActivity(groupId),
     ]);
     setBalances(b);
     setSettlements(s);
     setCategoryBreakdown(c);
+    setSpendingTrend(t);
     setActivity(a);
   }
 
@@ -139,7 +146,7 @@ export default function GroupDetailPage() {
     <PageShell>
       <Link
         href="/"
-        className="mb-6 inline-flex items-center gap-1 rounded-sm font-mono text-xs uppercase tracking-wider text-ink/60 transition-colors hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ledger-green"
+        className="mb-6 inline-flex items-center gap-1 rounded-full font-sans text-sm text-ink-muted transition-colors hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
       >
         ← Your groups
       </Link>
@@ -156,17 +163,15 @@ export default function GroupDetailPage() {
 
       {loadError && <ErrorBanner className="mb-4" message={loadError} />}
 
-      <nav className="-mx-4 mb-4 overflow-x-auto px-4">
-        <div className="flex gap-6 whitespace-nowrap font-mono text-sm sm:gap-8">
+      <nav className="-mx-4 mb-6 overflow-x-auto px-4">
+        <div className="inline-flex gap-1 whitespace-nowrap rounded-full border border-border bg-surface-muted p-1 font-sans text-sm">
           {(["expenses", "balances", "settle", "recurring", "activity"] as Tab[]).map((t) => (
             <button
               key={t}
               type="button"
               onClick={() => setTab(t)}
-              className={`rounded-sm pb-1 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ledger-green ${
-                tab === t
-                  ? "border-b-2 border-ledger-green font-bold text-ledger-green"
-                  : "border-b-2 border-transparent text-ink/60 hover:text-ink"
+              className={`rounded-full px-3.5 py-1.5 font-semibold transition-colors focus-visible:relative focus-visible:z-10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
+                tab === t ? "bg-primary text-white" : "text-ink-muted hover:text-ink"
               }`}
               aria-current={tab === t ? "page" : undefined}
             >
@@ -183,7 +188,6 @@ export default function GroupDetailPage() {
           ))}
         </div>
       </nav>
-      <div className="stitch-divider mb-6" aria-hidden="true" />
 
       {tab === "expenses" && (
         <ExpensesTab
@@ -191,6 +195,7 @@ export default function GroupDetailPage() {
           members={group.members}
           expenses={expenses}
           categoryBreakdown={categoryBreakdown}
+          spendingTrend={spendingTrend}
           currentUserId={currentUserId}
           onExpensesChanged={setExpenses}
           onDerivedDataChanged={refreshAfterExpenseChange}

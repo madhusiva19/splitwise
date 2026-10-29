@@ -8,53 +8,43 @@ interface AuthCardProps {
 
 export default function AuthCard({ mode, children }: AuthCardProps) {
   return (
-    <div className="relative flex min-h-screen items-center justify-center bg-paper px-4">
+    <div className="relative flex min-h-screen items-center justify-center bg-bg px-4">
       <div className="absolute right-4 top-4">
         <ThemeToggle />
       </div>
 
-      <div className="w-full max-w-sm overflow-hidden rounded-sm border border-line bg-paper shadow-sm">
-        <div className="perforated-top" aria-hidden="true" />
+      <div className="w-full max-w-sm overflow-hidden rounded-3xl border border-border bg-surface p-8 shadow-card dark:shadow-card-dark">
+        <header className="mb-6 text-center">
+          <h1 className="font-sans text-2xl font-extrabold tracking-tight text-ink">
+            Splitwise
+          </h1>
+          <p className="mt-1 font-sans text-sm text-ink-muted">
+            Split the bill, not the friendship
+          </p>
+        </header>
 
-        <div className="px-8 pb-8 pt-2">
-          <header className="mb-6 text-center">
-            <h1 className="font-mono text-lg font-bold tracking-tight text-ink">
-              Splitwise
-            </h1>
-            <p className="mt-1 font-mono text-xs uppercase tracking-widest text-ink/60">
-              Split the bill, not the friendship
-            </p>
-          </header>
+        <nav className="mb-6 flex justify-center gap-1 rounded-full border border-border bg-surface-muted p-1 font-sans text-sm">
+          <Link
+            href="/login"
+            className={`flex-1 rounded-full py-1.5 text-center font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
+              mode === "login" ? "bg-primary text-white" : "text-ink-muted hover:text-ink"
+            }`}
+            aria-current={mode === "login" ? "page" : undefined}
+          >
+            Log in
+          </Link>
+          <Link
+            href="/signup"
+            className={`flex-1 rounded-full py-1.5 text-center font-semibold transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
+              mode === "signup" ? "bg-primary text-white" : "text-ink-muted hover:text-ink"
+            }`}
+            aria-current={mode === "signup" ? "page" : undefined}
+          >
+            Sign up
+          </Link>
+        </nav>
 
-          <nav className="mb-6 flex justify-center gap-8 font-mono text-sm">
-            <Link
-              href="/login"
-              className={`transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ledger-green ${
-                mode === "login"
-                  ? "border-b-2 border-ledger-green pb-1 font-bold text-ledger-green"
-                  : "pb-1 text-ink/60 hover:text-ink"
-              }`}
-              aria-current={mode === "login" ? "page" : undefined}
-            >
-              Log in
-            </Link>
-            <Link
-              href="/signup"
-              className={`transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ledger-green ${
-                mode === "signup"
-                  ? "border-b-2 border-ledger-green pb-1 font-bold text-ledger-green"
-                  : "pb-1 text-ink/60 hover:text-ink"
-              }`}
-              aria-current={mode === "signup" ? "page" : undefined}
-            >
-              Sign up
-            </Link>
-          </nav>
-
-          <div className="stitch-divider mb-6" aria-hidden="true" />
-
-          {children}
-        </div>
+        {children}
       </div>
     </div>
   );

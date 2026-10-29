@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Button from "@/components/Button";
 
 interface ConfirmDialogProps {
   open: boolean;
@@ -51,13 +52,6 @@ export default function ConfirmDialog({
 
   const matches = confirmationPhrase === undefined || input.trim() === confirmationPhrase;
 
-  // Tailwind's build-time scanner needs complete, literal class strings — it can't see
-  // classes assembled from a template literal like `bg-${accent}` — so pick a full set here.
-  const inputFocusClass = destructive ? "focus:border-debt" : "focus:border-ledger-green";
-  const confirmButtonClass = destructive
-    ? "bg-debt hover:bg-debt/90 focus-visible:outline-debt"
-    : "bg-ledger-green hover:bg-ledger-green-dark focus-visible:outline-ledger-green";
-
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-ink/50 px-4"
@@ -68,47 +62,46 @@ export default function ConfirmDialog({
         if (e.target === e.currentTarget) onCancel();
       }}
     >
-      <div className="w-full max-w-sm overflow-hidden rounded-sm border border-line bg-paper shadow-lg">
-        <div className="perforated-top" aria-hidden="true" />
-        <div className="px-6 pb-6 pt-2">
-          <h2 id="confirm-dialog-title" className="font-mono text-base font-bold text-ink">
-            {title}
-          </h2>
-          <p className="mt-2 font-sans text-sm text-ink/70">{description}</p>
+      <div className="w-full max-w-sm overflow-hidden rounded-2xl border border-border bg-surface p-6 shadow-card dark:shadow-card-dark">
+        <h2 id="confirm-dialog-title" className="font-sans text-base font-bold text-ink">
+          {title}
+        </h2>
+        <p className="mt-2 font-sans text-sm text-ink-muted">{description}</p>
 
-          {confirmationPhrase !== undefined && (
-            <label className="mt-4 block">
-              <span className="block font-mono text-xs uppercase tracking-wider text-ink/60">
-                Type <span className="font-bold text-ink">{confirmationPhrase}</span> to confirm
-              </span>
-              <input
-                type="text"
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                autoFocus
-                autoComplete="off"
-                className={`mt-1 w-full border-0 border-b border-line bg-transparent py-1.5 font-sans text-ink outline-none transition-colors ${inputFocusClass} focus:ring-0`}
-              />
-            </label>
-          )}
+        {confirmationPhrase !== undefined && (
+          <label className="mt-4 block">
+            <span className="block font-sans text-xs text-ink-muted">
+              Type <span className="font-semibold text-ink">{confirmationPhrase}</span> to confirm
+            </span>
+            <input
+              type="text"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              autoFocus
+              autoComplete="off"
+              className={`mt-1.5 w-full rounded-xl border bg-surface-muted px-4 py-2.5 font-sans text-ink outline-none transition-colors focus:ring-2 focus:ring-offset-0 ${
+                destructive
+                  ? "border-transparent focus:border-negative focus:ring-negative/20"
+                  : "border-transparent focus:border-primary focus:ring-primary/20"
+              }`}
+            />
+          </label>
+        )}
 
-          <div className="mt-5 flex gap-3">
-            <button
-              type="button"
-              onClick={onConfirm}
-              disabled={!matches || confirming}
-              className={`flex-1 rounded-sm py-2.5 font-mono text-sm font-bold uppercase tracking-wider text-paper transition-colors active:opacity-90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-50 ${confirmButtonClass}`}
-            >
-              {confirming ? confirmingLabel ?? "Working…" : confirmLabel}
-            </button>
-            <button
-              type="button"
-              onClick={onCancel}
-              className="rounded-sm border border-line px-4 py-2.5 font-mono text-sm font-bold uppercase tracking-wider text-ink/70 transition-colors hover:text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ledger-green"
-            >
-              Cancel
-            </button>
-          </div>
+        <div className="mt-5 flex gap-3">
+          <Button
+            variant={destructive ? "danger" : "primary"}
+            fullWidth
+            onClick={onConfirm}
+            disabled={!matches}
+            loading={confirming}
+            loadingLabel={confirmingLabel}
+          >
+            {confirmLabel}
+          </Button>
+          <Button variant="ghost" onClick={onCancel}>
+            Cancel
+          </Button>
         </div>
       </div>
     </div>
